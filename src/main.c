@@ -4,43 +4,52 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
-#include <argp.h>
 
-//#include "dhcp/endpoint.h"
-//#include "dhcp/handler.h"
-//#include "utils/delegate.h"
+#include "context.h"
+#include "args.h"
 #include "utils/log/log.h"
 
+const char* TAG = "MAIN";
 
-typedef struct {
-	struct log_handle* logger;
-
-} application_context;
-
-application_context* app_context;
 
 int main(int argc, char** argv) {
-	error_t parse_result = argp_parse(0, argc, argv, 0, 0, 0);
-	
-	int port = 67;
+	struct arguments args = get_parsed_arguments(argc, argv);
 
-	app_context = malloc(sizeof(application_context));
-	app_context->logger = log_get_handle();
-
-	log_info(app_context->logger, "MAIN", "DHCP server started at port 67...");
-
-	// atexit(exit_cleanup);
-	// signal(SIGINT, interrupted_exit);
-
-	//int result = listen_dhcp_packets(port, NULL);
-	int result = 0;
-
-	if (result < 0) {
-		fprintf(stderr, "Failed to start dhcp listen loop: %s\n", strerror(errno));
+	if (args.parse_result != 0) {
+		fprintf(stderr, "Failed to parse arguments: %s\n", strerror(args.parse_result));
 		exit(1);
 	}
 
-	log_info(app_context->logger, "MAIN", "Shutting down...");
+	//TODO create appropriate execution context (server/client)
+	int init_result = init_application_context(NULL);
+
+	if (init_result < 0) {
+		fprintf(stderr, "Failed to initialize context: %s\n", strerror(errno));
+		exit(2);
+	}
+
+	struct log_handle* logger = context_get_logger();
+
+	// atexit(exit_cleanup);
+	// signal(SIGINT, interrupted_exit);
+	
+	if (args.mode == MODE_SERVER) {
+		char server_start_msg[128];
+		sprintf(server_start_msg, "DHCP server started at port %d...", args.server_port);
+		
+		log_info(logger, TAG, server_start_msg);
+	}
+	else if (args.mode == MODE_CLIENT) {
+		char client_start_msg[512];
+		sprintf(client_start_msg, "DHCP client using server (%s) at port %d...",
+				args.server_host, args.server_port);
+
+		log_info(logger, TAG, client_start_msg);
+	}
+
+	//TODO
+
+	log_info(logger, TAG, "Shutting down...");
 	
 	return 0;
 }
