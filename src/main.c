@@ -5,11 +5,11 @@
 #include <signal.h>
 #include <errno.h>
 
-#include "context.h"
 #include "args.h"
+#include "context.h"
+#include "dhcp/server.h"
+#include "dhcp/client.h"
 #include "utils/log/log.h"
-
-const char* TAG = "MAIN";
 
 
 int main(int argc, char** argv) {
@@ -20,37 +20,36 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	//TODO create appropriate execution context (server/client)
-	int init_result = init_application_context(NULL);
+	int init_result = init_application_context(&args);
+	struct logger* log = context_get_logger();
 
 	if (init_result < 0) {
 		fprintf(stderr, "Failed to initialize context: %s\n", strerror(errno));
 		exit(2);
 	}
-
-	struct log_handle* logger = context_get_logger();
-
-	// atexit(exit_cleanup);
-	// signal(SIGINT, interrupted_exit);
 	
 	if (args.mode == MODE_SERVER) {
-		char server_start_msg[128];
-		sprintf(server_start_msg, "DHCP server started at port %d...", args.server_port);
-		
-		log_info(logger, TAG, server_start_msg);
+		struct server_args sargs = {
+			args.server_port,
+			args.server_host
+		};
+
+		dhcp_server_start(sargs);
 	}
 	else if (args.mode == MODE_CLIENT) {
-		char client_start_msg[512];
-		sprintf(client_start_msg, "DHCP client using server (%s) at port %d...",
-				args.server_host, args.server_port);
+		struct client_args cargs = {
+			args.server_port,
+			args.server_host
+		};
 
-		log_info(logger, TAG, client_start_msg);
+		dhcp_client_start(cargs);
 	}
 
-	//TODO
-
-	log_info(logger, TAG, "Shutting down...");
+	log_info(log, "MAIN", "Cleaning application context...");
+	cleanup_application_context();
 	
+	log_info(log, "MAIN", "Shutting down...");
+
 	return 0;
 }
 

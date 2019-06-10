@@ -94,13 +94,13 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 
 struct arguments get_parsed_arguments(int argc, char** argv) {
 	struct argp_option options[] = {
-		{ "port", OPT_PORT_KEY, "PORT", 0, "DHCP server port" },
-		{ "host", OPT_HOST_KEY, "HOST", 0, "DHCP server host for client" },
+		{ "port", OPT_PORT_KEY, "PORT", 0, "DHCP server port", 0 },
+		{ "host", OPT_HOST_KEY, "HOST", 0, "DHCP server host for client", 0 },
 		{ 0 }
 	};
 
-	struct arguments args = { MODE_UNKNOWN, 6767 };
-	struct argp argp = { options, parse_opt, args_doc, doc };
+	struct arguments args = { MODE_UNKNOWN, 6767, { 0 }, 0 };
+	struct argp argp = { options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 	
 	error_t argp_result = argp_parse(&argp, argc, argv, 0, 0, &args);
 	args.parse_result = argp_result;

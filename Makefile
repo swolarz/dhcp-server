@@ -12,7 +12,7 @@ TARGET = dhcp
 
 
 INCLUDE := -I$(INCLUDEDIR) -I$(SRCDIR)
-LDFLAGS := -L$(STATICDIR) -lsqlite3 -lpthread
+LDFLAGS := -L$(STATICDIR) -lsqlite3 -lpthread -ldl
 
 DEPFLAGS = -MT $@ -MM -MP -MF $(DEPDIR)/$*.d
 
@@ -39,12 +39,12 @@ sqlite3: $(STATICDIR)/$(LIBSQLITE3)
 
 $(BINDIR)/$(TARGET): $(OBJS)
 	@mkdir -p $(BINDIR)
-	$(CC) -o $@ $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 $(OBJS): $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPDIR)/%.d
 	@mkdir -p $(dir $@)
 	@mkdir -p $(patsubst $(OBJDIR)/%,$(DEPDIR)/%,$(dir $@))
-	$(CC) -c $(INCLUDE) $(LDFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $(INCLUDE) $< -o $@
 	@$(CC) -c $(DEPFLAGS) $(INCLUDE) $(LDFLAGS) $<
 	@touch $@
 
@@ -56,9 +56,12 @@ $(DEPS): ;
 
 ### Depencency build rules
 
-$(STATICDIR)/$(LIBSQLITE3): lib/sqlite3/sqlite3.c include/sqlite3.h
+# SQLITE3_SOURCE = lib/sqlite3/shell.c lib/sqlite3/sqlite3.c
+SQLITE3_SOURCE = lib/sqlite3/sqlite3.c
+
+$(STATICDIR)/$(LIBSQLITE3): $(SQLITE3_SOURCE) $(INCLUDEDIR)/sqlite3.h
 	@mkdir -p $(STATICDIR)
-	$(CC) -c -lpthread -o $(STATICDIR)/sqlite3.o $<
+	$(CC) -c $(SQLITE3_SOURCE) -o $(STATICDIR)/sqlite3.o -lpthread -ldl
 	ar rcs $@ $(STATICDIR)/sqlite3.o
 
 

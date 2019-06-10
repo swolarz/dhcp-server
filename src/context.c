@@ -4,47 +4,48 @@
 #include <stdlib.h>
 
 
-typedef struct execution_context execution_context;
-typedef struct log_handle log_handle;
+typedef struct logger logger;
 
 typedef struct {
-	execution_context* exec_context;
-	log_handle* logger;
+	logger* log;
 
 } application_context;
 
 
-application_context* app_context = NULL;
+static application_context* app_context = NULL;
 
 
-int init_application_context(execution_context* exec_context) {
+int init_application_context(struct arguments* args) {
 	app_context = malloc(sizeof(application_context));
-	app_context->exec_context = exec_context;
-	app_context->logger = log_get_handle();
+	app_context->log = initialize_log();
+
+	log_info(app_context->log, "CONTEXT", "Application context initialized");
 
 	return 0;
 }
 
-int cleanup_application_context() {
+void cleanup_application_context() {
 	if (app_context == NULL)
 		return;
 
-	if (app_context->exec_context != NULL)
-		call_handler(app_context->exec_context->cleanup_handler);
-
-	if (app_context->logger != NULL)
-		log_cleanup(app_context->logger);
+	if (app_context->log != NULL)
+		log_cleanup(app_context->log);
 
 	free(app_context);
 	app_context = NULL;
-
-	return 0;
 }
 
-log_handle* context_get_logger() {
+logger* context_get_logger() {
 	if (app_context == NULL)
 		return NULL;
 
-	return app_context->logger;
+	return app_context->log;
 }
+
+void init_control_pipe() {
+}
+
+void register_control_pipe() {
+}
+
 

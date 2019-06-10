@@ -1,10 +1,13 @@
 #include "log.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
 
+
+#define LOG_BUFFER_SIZE 512 
 
 #define LEVEL_DEBUG 0
 #define LEVEL_INFO 1
@@ -12,18 +15,18 @@
 #define LEVEL_ERROR 3
 
 
-typedef struct log_handle {
-} log_handle;
+typedef struct logger {
+} logger;
 
 
-log_handle* log_get_handle() {
-	log_handle* logger = malloc(sizeof(log_handle));
-	return logger;
+logger* initialize_log() {
+	logger* log = malloc(sizeof(logger));
+	return log;
 }
 
-void log_cleanup(log_handle* logger) {
-	if (logger != NULL)
-		free(logger);
+void log_cleanup(logger* log) {
+	if (log != NULL)
+		free(log);
 }
 
 int format_datetime(char* buffer) {
@@ -54,8 +57,8 @@ const char* format_level(int level) {
 	}
 }
 
-int log_message(log_handle* logger, int level, const char* tag, const char* msg) {
-	if (logger == NULL)
+int log_message(logger* log, int level, const char* tag, const char* format, va_list va) {
+	if (log == NULL)
 		return -1;
 
 	char time_buff[24];
@@ -63,23 +66,37 @@ int log_message(log_handle* logger, int level, const char* tag, const char* msg)
 
 	const char* level_buff = format_level(level);
 
-	fprintf(stdout, "[%s] %-8s | %-16s: %s\n", time_buff, level_buff, tag, msg);
+	char msg_buff[LOG_BUFFER_SIZE];
+	vsnprintf(msg_buff, LOG_BUFFER_SIZE, format, va);
+	va_end(va);
+
+	int bytes = fprintf(stdout, "[%s] %-8s | %-16s: %s\n", time_buff, level_buff, tag, msg_buff);
+	if (bytes < 0)
+		return -1;
+
+	return 0;
 }
 
-int log_debug(log_handle* logger, const char* tag, const char* msg) {
-	return log_message(logger, LEVEL_DEBUG, tag, msg);
+#define INIT_VA(fmt) va_list va; va_start(va, fmt)
+
+int log_debug(logger* log, const char* tag, const char* format, ...) {
+	INIT_VA(format);
+	return log_message(log, LEVEL_DEBUG, tag, format, va);
 }
 
-int log_info(log_handle* logger, const char* tag, const char* msg) {
-	return log_message(logger, LEVEL_INFO, tag, msg);
+int log_info(logger* log, const char* tag, const char* format, ...) {
+	INIT_VA(format);
+	return log_message(log, LEVEL_INFO, tag, format, va);
 }
 
-int log_warn(log_handle* logger, const char* tag, const char* msg) {
-	return log_message(logger, LEVEL_WARN, tag, msg);
+int log_warn(logger* log, const char* tag, const char* format, ...) {
+	INIT_VA(format);
+	return log_message(log, LEVEL_WARN, tag, format, va);
 }
 
-int log_error(struct log_handle* logger, const char* tag, const char* msg) {
-	return log_message(logger, LEVEL_ERROR, tag, msg);
+int log_error(struct logger* log, const char* tag, const char* format, ...) {
+	INIT_VA(format);
+	return log_message(log, LEVEL_ERROR, tag, format, va);
 }
 
 
