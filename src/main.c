@@ -12,6 +12,34 @@
 #include "utils/log/log.h"
 
 
+struct logger* loggr() {
+	return context_get_logger();
+}
+
+
+void on_shutdown() {
+	cleanup_application_context();
+}
+
+void on_exit_signal(int signo) {
+	context_notify_exit_signal(signo);
+}
+
+void setup_exit_handler() {
+	atexit(on_shutdown);
+	
+	struct sigaction sigact_exit;
+	memset(&sigact_exit, 0, sizeof(struct sigaction));
+
+	sigact_exit.sa_handler = on_exit_signal;
+
+	sigaction(SIGINT, sigaction, NULL);
+	sigaction(SIGTERM, sigaction, NULL);
+	sigaction(SIGHUP, sigaction, NULL);
+	sigaction(SIGQUIT, sigaction, NULL);
+}
+
+
 int main(int argc, char** argv) {
 	struct arguments args = get_parsed_arguments(argc, argv);
 
@@ -21,13 +49,13 @@ int main(int argc, char** argv) {
 	}
 
 	int init_result = init_application_context(&args);
-	struct logger* log = context_get_logger();
-
 	if (init_result < 0) {
 		fprintf(stderr, "Failed to initialize context: %s\n", strerror(errno));
 		exit(2);
 	}
-	
+
+	setup_exit_handler();
+
 	if (args.mode == MODE_SERVER) {
 		struct server_args sargs = {
 			args.server_port,
@@ -44,11 +72,6 @@ int main(int argc, char** argv) {
 
 		dhcp_client_start(cargs);
 	}
-
-	log_info(log, "MAIN", "Cleaning application context...");
-	cleanup_application_context();
-	
-	log_info(log, "MAIN", "Shutting down...");
 
 	return 0;
 }
