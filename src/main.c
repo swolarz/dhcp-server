@@ -12,11 +12,6 @@
 #include "utils/log/log.h"
 
 
-struct logger* loggr() {
-	return context_get_logger();
-}
-
-
 void on_shutdown() {
 	cleanup_application_context();
 }
@@ -33,10 +28,10 @@ void setup_exit_handler() {
 
 	sigact_exit.sa_handler = on_exit_signal;
 
-	sigaction(SIGINT, sigaction, NULL);
-	sigaction(SIGTERM, sigaction, NULL);
-	sigaction(SIGHUP, sigaction, NULL);
-	sigaction(SIGQUIT, sigaction, NULL);
+	sigaction(SIGINT, &sigact_exit, NULL);
+	sigaction(SIGTERM, &sigact_exit, NULL);
+	sigaction(SIGHUP, &sigact_exit, NULL);
+	sigaction(SIGQUIT, &sigact_exit, NULL);
 }
 
 
@@ -62,7 +57,7 @@ int main(int argc, char** argv) {
 			args.server_host
 		};
 
-		dhcp_server_start(sargs);
+		dhcp_server_start(&sargs);
 	}
 	else if (args.mode == MODE_CLIENT) {
 		struct client_args cargs = {

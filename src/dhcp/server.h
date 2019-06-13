@@ -7,7 +7,7 @@ struct server_args {
 	const char* server_ifaddr;
 };
 
-void dhcp_server_start(struct server_args args);
+void dhcp_server_start(struct server_args* args);
 
 
 #endif // __H_DHCP_SERVER_CONTEXT

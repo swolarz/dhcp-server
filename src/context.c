@@ -3,6 +3,9 @@
 #include "utils/list.h"
 
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
 
 
 typedef struct control_stream control_stream;
@@ -18,12 +21,19 @@ typedef struct {
 static application_context* app_context = NULL;
 
 
+static const char* TAG = "CONTEXT";
+
+static logger* loggr() {
+	return context_get_logger();
+}
+
+
 int init_application_context(struct arguments* args) {
 	app_context = malloc(sizeof(application_context));
 	app_context->log = initialize_log();
 	app_context->ctl_streams = list_create();
 
-	log_info(app_context->log, "CONTEXT", "Application context initialized");
+	log_info(loggr(), TAG, "Application context initialized");
 
 	return 0;
 }
@@ -36,8 +46,16 @@ void context_close_log() {
 	app_context->log = NULL;
 }
 
+void close_ctl_streams() {
+	if (app_context == NULL || app_context->ctl_streams == NULL)
+		return;
+
+	list_delete(app_context->ctl_streams);
+	app_context->ctl_streams = NULL;
+}
+
 void cleanup_application_context() {
-	log_info(app_context->log, "CONTEXT", "Cleaning application context...");
+	log_info(app_context->log, TAG, "Cleaning application context...");
 
 	if (app_context == NULL)
 		return;
@@ -72,7 +90,9 @@ control_stream* register_management_listener() {
 
 	list_append(app_context->ctl_streams, (struct list_item*) &ctl_pipe);
 	
-	control_stream ctl_stream = { ctl_pipe.pipe_fd[0] };
+	control_stream* ctl_stream = malloc(sizeof(control_stream));
+	memset(ctl_stream, 0, sizeof(control_stream));
+	ctl_stream->ctl_pipe = ctl_pipe.pipe_fd[0];
 
 	return ctl_stream;
 }
@@ -81,7 +101,7 @@ int ctl_stream_matches(struct list_item* ctl_pipe_item, void* ctl_strm) {
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
 	control_stream* ctl_stream = (control_stream*) ctl_strm;
 
-	return (ctl_pipe.pipe_fd[0] == ctl_stream.ctl_pipe);
+	return (ctl_pipe->pipe_fd[0] == ctl_stream->ctl_pipe);
 }
 
 void unregister_management_listener(control_stream* ctl_stream) {
@@ -90,6 +110,8 @@ void unregister_management_listener(control_stream* ctl_stream) {
 
 	struct list_predicate rm_pred = { ctl_stream_matches, ctl_stream };
 	list_remove(app_context->ctl_streams, rm_pred);
+
+	free(ctl_stream);
 }
 
 void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
