@@ -8,7 +8,6 @@
 #include "args.h"
 #include "context.h"
 #include "dhcp/server.h"
-#include "dhcp/client.h"
 #include "utils/log/log.h"
 
 
@@ -31,7 +30,6 @@ void setup_exit_handler() {
 	sigaction(SIGINT, &sigact_exit, NULL);
 	sigaction(SIGTERM, &sigact_exit, NULL);
 	sigaction(SIGHUP, &sigact_exit, NULL);
-	sigaction(SIGQUIT, &sigact_exit, NULL);
 }
 
 
@@ -51,22 +49,12 @@ int main(int argc, char** argv) {
 
 	setup_exit_handler();
 
-	if (args.mode == MODE_SERVER) {
-		struct server_args sargs = {
-			args.server_port,
-			args.server_host
-		};
+	struct server_args sargs = {
+		args.server_port,
+		args.server_host
+	};
 
-		dhcp_server_start(&sargs);
-	}
-	else if (args.mode == MODE_CLIENT) {
-		struct client_args cargs = {
-			args.server_port,
-			args.server_host
-		};
-
-		dhcp_client_start(cargs);
-	}
+	dhcp_server_start(&sargs);
 
 	return 0;
 }
