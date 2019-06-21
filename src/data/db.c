@@ -15,7 +15,7 @@ static struct logger* loggr() {
 
 const char* database_path() {
 	static char path_buff[256];
-	snprintf(path_buff, 255, "%s/dhcpv2.db", get_user_home());
+	snprintf(path_buff, 255, "%s/.dhcp2/storage.db", get_user_home());
 
 	return path_buff;
 }
@@ -87,15 +87,19 @@ sqlite3* init_sqlite_connection() {
 		return NULL;
 	}
 
-	err = migrate_sql_changelog(db);
+	return db;
+}
+
+int migrate_database(sqlite3* db) {
+	int err = migrate_sql_changelog(db);
 	if (err != 0) {
 		log_error(loggr(), "DB", "Failed to migrate database");
 		sqlite3_close(db);
 
-		return NULL;
+		return -1;
 	}
 
-	return db;
+	return 0;
 }
 
 void close_sqlite_connection(sqlite3* db) {

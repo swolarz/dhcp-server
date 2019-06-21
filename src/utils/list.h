@@ -1,6 +1,8 @@
 #ifndef __H_UTILS_LIST
 #define __H_UTILS_LIST
 
+#include <stdlib.h>
+
 
 struct list;
 
@@ -22,8 +24,8 @@ struct list_lambda {
 struct list* list_create(void);
 void list_delete(struct list* lst);
 
-void list_append(struct list* lst, struct list_item* item);
-void list_remove(struct list* lst, struct list_predicate predicate);
+void list_append(struct list* lst, struct list_item* item, ssize_t item_size);
+int list_remove(struct list* lst, struct list_predicate predicate);
 
 struct list_item* list_find_first(struct list* lst, struct list_predicate predicate);
 

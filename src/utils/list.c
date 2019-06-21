@@ -31,32 +31,45 @@ list* list_create(void) {
 	return lst;
 }
 
-void list_delete(struct list* lst) {
+void list_delete_node(list_node* node) {
+	free(node->item);
+	free(node);
+}
+
+void list_delete(list* lst) {
 	list_node* node = lst->head;
 
 	while (node != NULL) {
 		list_node* next = node->next;
 
-		free(node->item);
-		free(node);
-
+		list_delete_node(node);
 		node = next;
 	}
 
-	lst->head = NULL;
-	lst->tail = NULL;
 	free(lst);
 }
 
+list_node* list_find_tail(list* lst) {
+	if (lst->head == NULL)
+		return NULL;
 
-void list_append(list* lst, list_item* item) {
+	list_node* head = lst->head;
+
+	while (head->next != NULL)
+		head = head->next;
+
+	return head;
+}
+
+
+void list_append(list* lst, list_item* item, ssize_t item_size) {
 	list_node* node = malloc(sizeof(list_node));
 	
 	node->next = NULL;
 	node->prev = lst->tail;
 	
-	list_item* copy = malloc(sizeof(*item));
-	memcpy(copy, item, sizeof(*item));
+	list_item* copy = malloc(item_size);
+	memcpy(copy, item, item_size);
 	node->item = copy;
 
 	if (lst->head == NULL)
@@ -71,20 +84,31 @@ int list_check_predicate(list_predicate predicate, list_item* item) {
 	return predicate.predicate(item, predicate.data);
 }
 
-void list_remove(list* lst, list_predicate predicate) {
+int list_remove(list* lst, list_predicate predicate) {
+	int removed = 0;
 	list_node** head = &(lst->head);
 
 	while (*head != NULL) {
 		if (list_check_predicate(predicate, (*head)->item)) {
-			if ((*head)->next != NULL)
-				(*head)->next->prev = (*head)->prev;
+			list_node** next = &((*head)->next);
 
+			if (*next != NULL)
+				(*next)->prev = (*head)->prev;
+
+			list_node* to_delete = *head;
+			
 			*head = (*head)->next;
+			removed = removed + 1;
+
+			list_delete_node(to_delete);
 		}
+		else
+			head = &((*head)->next);
 	}
 
-	if (lst->head == NULL)
-		lst->tail = NULL;
+	lst->tail = list_find_tail(lst);
+
+	return removed;
 }
 
 list_item* list_find_first(list* lst, list_predicate predicate) {

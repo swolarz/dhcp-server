@@ -59,13 +59,23 @@ int recv_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt) {
 	if (bytes < 0)
 		return -1;
 
+	// dhcp_ntoh(dhcppkt);
+
 	return 0;
 }
 
 int send_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt, struct sockaddr* target_addr) {
+	if (dhcppkt == NULL)
+		return -1;
+
+	// dhcp_hton(dhcppkt);
+
 	return -1;
 }
 
+struct sockaddr* broadcast_addr() {
+	return NULL;
+}
 
 int translate_ifaddr(const char* ifaddr, struct in_addr* inaddr) {
 	return inet_aton(ifaddr, inaddr);

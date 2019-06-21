@@ -4,10 +4,12 @@
 #include "dhcp/inet/endpoint.h"
 #include "dhcp/data/store.h"
 #include "utils/log/log.h"
+#include "control.h"
 
 #include <string.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <signal.h>
 #include <errno.h>
 
 
@@ -34,8 +36,10 @@ int create_server_socket(const char* ifaddr, int port) {
 	memset(&saddr, 0, sizeof(struct sockaddr_in));
 
 	int err = translate_ifaddr(ifaddr, &(saddr.sin_addr));
-	if (err < 0)
+	if (err < 0) {
+		log_error(loggr(), "SERVER", "Error translating interface address");
 		return -1;
+	}
 
 	saddr.sin_family = AF_INET;
 	saddr.sin_port = htons(port);
@@ -52,7 +56,7 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 	struct db_connection* db_conn = init_db_connection();
 	
 	int dhcp_sock = create_server_socket(args->server_ifaddr, args->server_port);
-	if (dhcp_sock != 0) {
+	if (dhcp_sock < 0) {
 		log_error(loggr(), "SERVER", "Failed to create socket from: ifaddr (%s) and port (%d): %s",
 				args->server_ifaddr, args->server_port, strerror(errno));
 		
@@ -77,9 +81,18 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 }
 
 void dhcp_server_cleanup(dhcp_server_context* server_context) {
+	log_info(loggr(), "SERVER", "Disposing server resources...");
+
+	log_debug(loggr(), "SERVER", "Disposing database connection...");
 	cleanup_db_connection(server_context->db_conn);
+
+	log_debug(loggr(), "SERVER", "Closing server socket...");
 	close(server_context->dhcp_sock);
+
+	log_debug(loggr(), "SERVER", "Closing control stream...");
 	unregister_management_listener(server_context->ctl_stream);
+	
+	log_info(loggr(), "SERVER", "Finalized DHCP server");
 }
 
 int control_pipe_fd(dhcp_server_context* server_context) {
@@ -91,7 +104,7 @@ int dhcp_socket_fd(dhcp_server_context* server_context) {
 }
 
 int setup_epoll(dhcp_server_context* server_context) {
-	int epfd = epoll_create(0);
+	int epfd = epoll_create(1);
 	if (epfd < 0) {
 		log_error(loggr(), "SERVER", "Failed to init epoll: %s", strerror(errno));
 		return -1;
@@ -163,6 +176,9 @@ int handle_dhcp_request(int cfd) {
 
 int dhcp_server_loop(dhcp_server_context* server_context) {
 	int epfd = setup_epoll(server_context);
+	if (epfd < 0)
+		return -1;
+
 	struct epoll_event events[MAX_EPOLL_EVENTS];
 
 	int ctl_fd = control_pipe_fd(server_context);
@@ -171,8 +187,13 @@ int dhcp_server_loop(dhcp_server_context* server_context) {
 	while (1) {
 		int nfds = epoll_wait(epfd, events, MAX_EPOLL_EVENTS, -1);
 
+		if (nfds < 0 && errno == EINTR) {
+			log_warn(loggr(), TAG, "Epoll wait interrupted");
+			continue;
+		}
+		
 		if (nfds < 0) {
-			log_error(loggr(), "SERVER", "Epoll wait for events error: %s", strerror(errno));
+			log_error(loggr(), "SERVER", "Epoll error while waiting for events: %s", strerror(errno));
 			break;
 		}
 

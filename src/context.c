@@ -1,11 +1,13 @@
 #include "context.h"
 #include "utils/log/log.h"
 #include "utils/list.h"
+#include "control.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 
 typedef struct control_stream control_stream;
@@ -80,6 +82,13 @@ typedef struct {
 
 } control_pipe;
 
+/*
+void print_item(struct list_item* item, void* data) {
+	control_pipe* ctl_pipe  = (control_pipe*) item;
+	log_verbose(loggr(), TAG, "List item (control pipe): (pull = %d, push = %d)",
+			ctl_pipe->pipe_fd[0], ctl_pipe->pipe_fd[1]);
+}
+*/
 
 control_stream* register_management_listener() {
 	if (app_context == NULL || app_context->ctl_streams == NULL)
@@ -88,7 +97,10 @@ control_stream* register_management_listener() {
 	control_pipe ctl_pipe;
 	pipe(ctl_pipe.pipe_fd);
 
-	list_append(app_context->ctl_streams, (struct list_item*) &ctl_pipe);
+	log_verbose(loggr(), TAG, "Created control pipe (pull = %d, push = %d)",
+			ctl_pipe.pipe_fd[0], ctl_pipe.pipe_fd[1]);
+
+	list_append(app_context->ctl_streams, (struct list_item*) &ctl_pipe, sizeof(control_pipe));
 	
 	control_stream* ctl_stream = malloc(sizeof(control_stream));
 	memset(ctl_stream, 0, sizeof(control_stream));
@@ -101,6 +113,9 @@ int ctl_stream_matches(struct list_item* ctl_pipe_item, void* ctl_strm) {
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
 	control_stream* ctl_stream = (control_stream*) ctl_strm;
 
+	log_verbose(loggr(), TAG, "Matching control stream (fd = %d) with (pull = %d, push = %d)",
+			ctl_stream->ctl_pipe, ctl_pipe->pipe_fd[0], ctl_pipe->pipe_fd[1]);
+
 	return (ctl_pipe->pipe_fd[0] == ctl_stream->ctl_pipe);
 }
 
@@ -108,17 +123,25 @@ void unregister_management_listener(control_stream* ctl_stream) {
 	if (app_context == NULL || app_context->ctl_streams == NULL)
 		return;
 
+	log_debug(loggr(), TAG, "Closing control stream with control pipe: %d", ctl_stream->ctl_pipe);
+
 	struct list_predicate rm_pred = { ctl_stream_matches, ctl_stream };
-	list_remove(app_context->ctl_streams, rm_pred);
+	int removed = list_remove(app_context->ctl_streams, rm_pred);
+
+	log_debug(loggr(), TAG, "Closed %d control pipes", removed);
 
 	free(ctl_stream);
 }
 
 void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
-	const char stop_msg[] = "!stop;";
 
-	write(ctl_pipe->pipe_fd[1], stop_msg, sizeof(stop_msg));
+	log_debug(loggr(), TAG, "Pushing message to control pipe: %d", ctl_pipe->pipe_fd[1]);
+	int bytes = write(ctl_pipe->pipe_fd[1], CONTROL_STOP, CONTROL_STOP_SIZE);
+
+	if (bytes < 0) {
+		log_warn(loggr(), TAG, "Failed push message via control pipe: %s", strerror(errno));
+	}
 }
 
 void control_notify_exit() {

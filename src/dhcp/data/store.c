@@ -27,6 +27,14 @@ db_connection* init_db_connection() {
 		return NULL;
 	}
 
+	int err = migrate_database(db);
+	if (err) {
+		log_error(loggr(), "STORE", "Database was not migrated succesfully");
+		close_sqlite_connection(db);
+
+		return NULL;
+	}
+
 	db_connection* db_conn = malloc(sizeof(db_connection));
 	db_conn->db = db;
 

@@ -9,10 +9,14 @@
 
 #define LOG_BUFFER_SIZE 512 
 
-#define LEVEL_DEBUG 0
-#define LEVEL_INFO 1
-#define LEVEL_WARN 2
-#define LEVEL_ERROR 3
+#define LEVEL_VERBOSE 1
+#define LEVEL_DEBUG 2
+#define LEVEL_INFO 3
+#define LEVEL_WARN 4
+#define LEVEL_ERROR 5
+
+
+#define MIN_LOG_LEVEL LEVEL_VERBOSE
 
 
 typedef struct logger {
@@ -44,6 +48,8 @@ int format_datetime(char* buffer) {
 
 const char* format_level(int level) {
 	switch (level) {
+		case LEVEL_VERBOSE:
+			return "VERBOSE";
 		case LEVEL_DEBUG:
 			return "DEBUG";
 		case LEVEL_INFO:
@@ -61,6 +67,9 @@ int log_message(logger* log, int level, const char* tag, const char* format, va_
 	if (log == NULL)
 		return -1;
 
+	if (level < MIN_LOG_LEVEL)
+		return 0;
+
 	char time_buff[24];
 	format_datetime(time_buff);
 
@@ -70,7 +79,7 @@ int log_message(logger* log, int level, const char* tag, const char* format, va_
 	vsnprintf(msg_buff, LOG_BUFFER_SIZE, format, va);
 	va_end(va);
 
-	int bytes = fprintf(stdout, "[%s] %-8s | %-16s: %s\n", time_buff, level_buff, tag, msg_buff);
+	int bytes = fprintf(stdout, "[%s] | %-8s | %-12s | %s\n", time_buff, level_buff, tag, msg_buff);
 	if (bytes < 0)
 		return -1;
 
@@ -78,6 +87,11 @@ int log_message(logger* log, int level, const char* tag, const char* format, va_
 }
 
 #define INIT_VA(fmt) va_list va; va_start(va, fmt)
+
+int log_verbose(struct logger* log, const char* tag, const char* format, ...) {
+	INIT_VA(format);
+	return log_message(log, LEVEL_VERBOSE, tag, format, va);
+}
 
 int log_debug(logger* log, const char* tag, const char* format, ...) {
 	INIT_VA(format);

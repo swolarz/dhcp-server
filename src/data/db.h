@@ -7,6 +7,8 @@
 sqlite3* init_sqlite_connection();
 void close_sqlite_connection(sqlite3* db);
 
+int migrate_database(sqlite3* db);
+
 int prepare_sql_stmt(sqlite3* db, const char* sql, sqlite3_stmt** stmt);
 int exec_sql_stmt(sqlite3* db, sqlite3_stmt* stmt);
 int exec_immediate_sql_stmt(sqlite3* db, const char* sql);
