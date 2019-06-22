@@ -1,6 +1,6 @@
 #include "server.h"
 #include "context.h"
-#include "dhcp/inet/packet.h"
+#include "dhcp/inet/dhcppkt.h"
 #include "dhcp/inet/endpoint.h"
 #include "dhcp/data/store.h"
 #include "utils/log/log.h"
@@ -162,6 +162,8 @@ int control_exit_msg_exists(struct epoll_event events[], int nfds, int ctl_fd) {
 }
 
 int handle_dhcp_request(int cfd) {
+	log_debug(loggr(), TAG, "Handling incoming DHCP request");
+
 	struct dhcp_packet dhcppkt;
 	memset(&dhcppkt, 0, sizeof(struct dhcp_packet));
 

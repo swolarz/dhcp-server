@@ -2,6 +2,7 @@
 #include "utils/log/log.h"
 #include "utils/list.h"
 #include "control.h"
+#include "common.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,8 @@ static logger* loggr() {
 
 
 int init_application_context(struct arguments* args) {
+	UNUSED(args);
+
 	app_context = malloc(sizeof(application_context));
 	app_context->log = initialize_log();
 	app_context->ctl_streams = list_create();
@@ -134,6 +137,8 @@ void unregister_management_listener(control_stream* ctl_stream) {
 }
 
 void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
+	UNUSED(data);
+
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
 
 	log_debug(loggr(), TAG, "Pushing message to control pipe: %d", ctl_pipe->pipe_fd[1]);

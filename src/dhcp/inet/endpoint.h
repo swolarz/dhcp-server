@@ -1,7 +1,7 @@
 #ifndef HEADER_DHCP_ENDPOINT
 #define HEADER_DHCP_ENDPOINT
 
-#include "dhcp/inet/packet.h"
+#include "dhcp/inet/dhcppkt.h"
 
 #include <netinet/in.h>
 

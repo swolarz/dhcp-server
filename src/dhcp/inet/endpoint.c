@@ -1,6 +1,7 @@
 #include "endpoint.h"
 #include "context.h"
 #include "utils/log/log.h"
+#include "common.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -51,24 +52,43 @@ int dhcp_socket(struct sockaddr* saddr, socklen_t slen) {
 	return sfd;
 }
 
-int recv_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt) {
-	if (dhcppkt == NULL)
-		return -1;
 
-	ssize_t bytes = recvfrom(sfd, (void*) dhcppkt, sizeof(struct dhcp_packet), 0, NULL, NULL);
+int log_dhcp_packet(struct dhcp_packet* dhcp_pkt) {
+	char buffer[1024];
+	ssize_t bytes = dhcp_packet_format(dhcp_pkt, buffer, sizeof(buffer));
+
+	if (bytes < 0) {
+		log_error(loggr(), TAG, "Could not format DHCP packet");
+		return -1;
+	}
+
+	log_info(loggr(), TAG, "DHCP packet data:\n%s", buffer);
+
+	return 0;
+}
+
+int recv_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt) {
+	char buffer[sizeof(struct dhcp_packet)];
+	ssize_t bytes = recvfrom(sfd, buffer, sizeof(buffer), 0, NULL, NULL);
 	if (bytes < 0)
 		return -1;
 
-	// dhcp_ntoh(dhcppkt);
+	int err = dhcp_packet_unmarshall(buffer, (size_t) bytes, dhcppkt);
+	if (err < 0) {
+		log_error(loggr(), TAG, "Failed to unmarshall DHCP packet");
+		return -1;
+	}
+
+	log_dhcp_packet(dhcppkt);
 
 	return 0;
 }
 
 int send_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt, struct sockaddr* target_addr) {
-	if (dhcppkt == NULL)
-		return -1;
-
-	// dhcp_hton(dhcppkt);
+	//TODO
+	UNUSED(sfd);
+	UNUSED(dhcppkt);
+	UNUSED(target_addr);
 
 	return -1;
 }

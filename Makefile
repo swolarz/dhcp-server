@@ -56,7 +56,6 @@ $(DEPS): ;
 
 ### Depencency build rules
 
-# SQLITE3_SOURCE = lib/sqlite3/shell.c lib/sqlite3/sqlite3.c
 SQLITE3_SOURCE = lib/sqlite3/sqlite3.c
 
 $(STATICDIR)/$(LIBSQLITE3): $(SQLITE3_SOURCE) $(INCLUDEDIR)/sqlite3.h
