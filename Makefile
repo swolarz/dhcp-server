@@ -74,7 +74,8 @@ run-server: dhcp
 
 .PHONY: init-dirs
 init-dirs:
-	mkdir /tmp/dhcpv2
+	mkdir -p /tmp/dhcpv2
+	cp sample/dhcp.conf.default /tmp/dhcpv2/dhcp.conf
 
 
 ### Cleanup rules

@@ -6,7 +6,7 @@
 
 #define DHCP_SNAME_LEN 40
 #define DHCP_FILE_LEN 128
-#define DHCP_OPT_LEN 4
+#define DHCP_OPT_LEN 1
 
 
 struct dhcp_packet {
@@ -27,8 +27,15 @@ struct dhcp_packet {
 	unsigned char options[DHCP_OPT_LEN];
 };
 
+#define OP_BOOTPREQUEST 1
+#define OP_BOOTPREPLY 2
+#define HTYPE_ETHERNET 1
+#define HWLEN_ETHERNET 6
 
-int dhcp_packet_marshall(struct dhcp_packet* pkt, char* buffer, size_t buf_size);
+size_t dhcp_packet_allocation(void);
+size_t dhcp_packet_size(struct dhcp_packet* pkt);
+
+int dhcp_packet_marshall(struct dhcp_packet* pkt, char* buffer, size_t* size);
 int dhcp_packet_unmarshall(char* buffer, size_t buf_size, struct dhcp_packet* pkt);
 
 
@@ -36,7 +43,6 @@ int dhcp_packet_unmarshall(char* buffer, size_t buf_size, struct dhcp_packet* pk
 #define DHCP_INVALID_HTYPE 2
 
 int dhcp_packet_validate(struct dhcp_packet* dhcp_pkt);
-
 ssize_t dhcp_packet_format(struct dhcp_packet* dhcp_pkt, char* buffer, size_t buf_size);
 
 

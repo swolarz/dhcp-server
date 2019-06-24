@@ -7,6 +7,7 @@
 struct dhcp_config {
 	struct in_addr net_addr;
 	struct in_addr net_mask;
+	struct in_addr net_gateway;
 };
 
 

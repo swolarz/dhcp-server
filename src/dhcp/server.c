@@ -3,6 +3,7 @@
 #include "control.h"
 #include "dhcp/inet/dhcppkt.h"
 #include "dhcp/inet/endpoint.h"
+#include "dhcp/handler/request.h"
 #include "dhcp/data/store.h"
 #include "utils/net.h"
 #include "utils/log/log.h"
@@ -35,7 +36,7 @@ typedef struct {
 } dhcp_server_context;
 
 
-int create_server_socket(const char* ifaddr, int port) {
+static int create_server_socket(const char* ifaddr, int port) {
 	struct sockaddr_in saddr;
 	memset(&saddr, 0, sizeof(struct sockaddr_in));
 
@@ -53,7 +54,7 @@ int create_server_socket(const char* ifaddr, int port) {
 	return dhcp_socket((struct sockaddr*) &saddr, slen);
 }
 
-int init_dhcp_server(struct server_args* args, dhcp_server_context* server_context) {
+static int init_dhcp_server(struct server_args* args, dhcp_server_context* server_context) {
 	log_info(loggr(), TAG, "Initializing DHCP server...");
 	
 	memset(server_context, 0, sizeof(dhcp_server_context));
@@ -96,7 +97,7 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 	return 0;
 }
 
-void dhcp_server_cleanup(dhcp_server_context* server_context) {
+static void dhcp_server_cleanup(dhcp_server_context* server_context) {
 	log_info(loggr(), "SERVER", "Disposing server resources...");
 
 	dhcp_config_cleanup(server_context->dhcpconf);
@@ -113,15 +114,15 @@ void dhcp_server_cleanup(dhcp_server_context* server_context) {
 	log_info(loggr(), "SERVER", "Finalized DHCP server");
 }
 
-int control_pipe_fd(dhcp_server_context* server_context) {
+static int control_pipe_fd(dhcp_server_context* server_context) {
 	return server_context->ctl_stream->ctl_pipe;
 }
 
-int dhcp_socket_fd(dhcp_server_context* server_context) {
+static int dhcp_socket_fd(dhcp_server_context* server_context) {
 	return server_context->dhcp_sock;
 }
 
-int setup_epoll(dhcp_server_context* server_context) {
+static int setup_epoll(dhcp_server_context* server_context) {
 	int epfd = epoll_create(1);
 	if (epfd < 0) {
 		log_error(loggr(), "SERVER", "Failed to init epoll: %s", strerror(errno));
@@ -163,7 +164,7 @@ int setup_epoll(dhcp_server_context* server_context) {
 	return epfd;
 }
 
-int control_exit_msg_exists(struct epoll_event events[], int nfds, int ctl_fd) {
+static int control_exit_msg_exists(struct epoll_event events[], int nfds, int ctl_fd) {
 	int i;
 	for (i = 0; i < nfds; ++i) {
 		int fd = events[i].data.fd;
@@ -179,22 +180,7 @@ int control_exit_msg_exists(struct epoll_event events[], int nfds, int ctl_fd) {
 	return 0;
 }
 
-int handle_dhcp_request(int cfd) {
-	log_debug(loggr(), TAG, "Handling incoming DHCP request");
-
-	struct dhcp_packet dhcppkt;
-	memset(&dhcppkt, 0, sizeof(struct dhcp_packet));
-
-	int err = recv_dhcp_packet(cfd, &dhcppkt);
-	if (err < 0) {
-		log_error(loggr(), TAG, "Error occurred while receiving DHCP packet: %s", strerror(errno));
-		return -1;
-	}
-
-	return -1;
-}
-
-int dhcp_server_loop(dhcp_server_context* server_context) {
+static int dhcp_server_loop(dhcp_server_context* server_context, int port) {
 	int epfd = setup_epoll(server_context);
 	if (epfd < 0)
 		return -1;
@@ -229,7 +215,7 @@ int dhcp_server_loop(dhcp_server_context* server_context) {
 			if (fd == ctl_fd)
 				continue;
 			else if (fd == dhcp_fd)
-				handle_dhcp_request(fd);
+				handle_dhcp_request(fd, port + 1, server_context->dhcpconf);
 		}
 	}
 
@@ -251,7 +237,7 @@ void dhcp_server_start(struct server_args* args) {
 	log_info(loggr(), "SERVER", "Started DHCP server at %s on port %d...",
 			args->server_ifaddr, args->server_port);
 
-	err = dhcp_server_loop(&server_context);
+	err = dhcp_server_loop(&server_context, args->server_port);
 	if (err != 0) {
 		log_error(loggr(), "SERVER", "Server main loop exited with failure");
 	}

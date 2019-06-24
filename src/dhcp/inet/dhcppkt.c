@@ -31,6 +31,16 @@ struct dhcp_packet_packed {
 typedef struct dhcp_packet_packed dhcp_pkt_packed;
 
 
+size_t dhcp_packet_allocation(void) {
+	return sizeof(dhcp_pkt_packed) * 2;
+}
+
+size_t dhcp_packet_size(struct dhcp_packet* pkt) {
+	UNUSED(pkt);
+	return dhcp_packet_allocation();
+}
+
+
 static void dhcp_hton(dhcp_packet* pkt_host) {
 	pkt_host->xid = htonl(pkt_host->xid);
 	pkt_host->secs = htons(pkt_host->secs);
@@ -96,14 +106,17 @@ static void dhcp_packet_copy_rx(dhcp_packet* pkt_rx, dhcp_pkt_packed* pkt_rx_pac
 }
 
 
-int dhcp_packet_marshall(dhcp_packet* pkt, char* buffer, size_t buf_size) {
-	if (buf_size < sizeof(dhcp_pkt_packed))
+int dhcp_packet_marshall(dhcp_packet* pkt, char* buffer, size_t* size) {
+	size_t real_size = dhcp_packet_size(pkt);
+	if (*size < real_size)
 		return -1;
 
 	dhcp_hton(pkt);
 
 	dhcp_pkt_packed* pkt_packed = (dhcp_pkt_packed*) buffer;
 	dhcp_packet_copy_tx(pkt_packed, pkt);
+
+	*size = real_size;
 
 	return 0;
 }
@@ -183,17 +196,19 @@ ssize_t dhcp_packet_format(dhcp_packet* dhcp_pkt, char* buffer, size_t buf_size)
 	char* flags_fmt = dhcp_fmt_flags(dhcp_pkt->flags);
 	char* caddr_fmt = dhcp_fmt_addr(&(dhcp_pkt->ciaddr));
 	char* yaddr_fmt = dhcp_fmt_addr(&(dhcp_pkt->yiaddr));
+	char* gaddr_fmt = dhcp_fmt_addr(&(dhcp_pkt->giaddr));
 	char* hwaddr_fmt = dhcp_fmt_hwaddr(dhcp_pkt->chwaddr, dhcp_pkt->htype, dhcp_pkt->hwlen);
 
 	ssize_t bytes = snprintf(buffer, buf_size,
 			"OP: %s\nHTYPE: %s\nHWLEN: %hhu\nHOPS: %hhu\nXID: %u\nSECS: %hu\nFLAGS: %s\n"
-			"CLIENT ADDR: %s\nASSIGNED ADDR: %s\nHARDWARE ADDR: %s",
+			"CLIENT ADDR: %s\nASSIGNED ADDR: %s\nGATEWAY ADDR: %s\nHARDWARE ADDR: %s",
 			dhcp_fmt_op(dhcp_pkt->op), dhcp_fmt_htype(dhcp_pkt->htype), dhcp_pkt->hwlen, dhcp_pkt->hops, dhcp_pkt->xid,
-			dhcp_pkt->secs, flags_fmt, caddr_fmt, yaddr_fmt, hwaddr_fmt);
+			dhcp_pkt->secs, flags_fmt, caddr_fmt, yaddr_fmt, gaddr_fmt, hwaddr_fmt);
 
 	free(flags_fmt);
 	free(caddr_fmt);
 	free(yaddr_fmt);
+	free(gaddr_fmt);
 	free(hwaddr_fmt);
 
 	return bytes;

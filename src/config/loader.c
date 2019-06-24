@@ -1,7 +1,6 @@
 #include "loader.h"
 #include "context.h"
 #include "utils/net.h"
-#include "utils/net.h"
 #include "utils/log/log.h"
 
 #include <stdio.h>
@@ -23,9 +22,11 @@ static struct logger* loggr() {
 
 #define CONF_NET_IP 1
 #define CONF_NET_MASK 2
+#define CONF_NET_GATEWAY 3
 
 const char* NET_IP_KEY = "LEASE_NET_IP";
 const char* NET_MASK_KEY = "LEASE_NET_MASK";
+const char* NET_ROUTER_KEY = "NET_ROUTER_IP";
 
 
 static FILE* open_dhcp_config_file() {
@@ -113,6 +114,12 @@ static int parse_config_line(const char* buffer, dhcp_config* conf) {
 
 		parse_inaddr(value, &(conf->net_mask));
 		parsed_field = CONF_NET_MASK;
+	}
+	else if (strcmp(key, NET_ROUTER_KEY) == 0) {
+		log_debug(loggr(), TAG, "Network gateway ip: %s", value);
+		
+		parse_inaddr(value, &(conf->net_gateway));
+		parsed_field = CONF_NET_GATEWAY;
 	}
 	else {
 		log_warn(loggr(), TAG, "Unknown DHCP config key: %s", key);
