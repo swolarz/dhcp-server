@@ -1,8 +1,8 @@
 #include "db.h"
 #include "context.h"
+#include "common.h"
 #include "changelog.h"
 #include "utils/log/log.h"
-#include "utils/user.h"
 
 #include <string.h>
 #include <sqlite3.h>
@@ -14,10 +14,7 @@ static struct logger* loggr() {
 
 
 const char* database_path() {
-	static char path_buff[256];
-	snprintf(path_buff, 255, "%s/.dhcp2/storage.db", get_user_home());
-
-	return path_buff;
+	return context_db_path();
 }
 
 int exec_immediate_sql_stmt(sqlite3* db, const char* sql) {

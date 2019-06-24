@@ -1,5 +1,6 @@
 #include "dhcppkt.h"
 #include "common.h"
+#include "utils/net.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,19 +146,56 @@ static char* dhcp_fmt_flags(u_int16_t flags) {
 	char* flags_buf = malloc(sizeof(flags_fmt));
 	strcpy(flags_buf, flags_fmt);
 
-	if ((flags & 1) > 0)
-		flags_buf[0] = '1';
+	int i;
+	for (i = 0; i < 16; ++i) {
+		if ((flags & (1 << i)) > 0)
+			flags_buf[i] = '1';
+	}
 
 	return flags_buf;
 }
 
+static char* dhcp_fmt_addr(struct in_addr* addr) {
+	char* addr_buf = malloc(64);
+	int err = format_inaddr(addr, addr_buf, 64);
+	
+	if (err < 0)
+		strcpy(addr_buf, "(invalid)");
+
+	return addr_buf;
+}
+
+static char* dhcp_fmt_hwaddr(unsigned char* hwaddr, u_int8_t htype, u_int8_t hwlen) {
+	char* hwaddr_buf = malloc(64);
+
+	if (htype == 1) {
+		int err = format_mac_addr(hwaddr, hwaddr_buf);
+		if (err < 0 || hwlen != 6)
+			strcpy(hwaddr_buf, "(invalid)");
+	}
+	else
+		strcpy(hwaddr_buf, "(not mac)");
+
+	return hwaddr_buf;
+}
+
 ssize_t dhcp_packet_format(dhcp_packet* dhcp_pkt, char* buffer, size_t buf_size) {
 	char* flags_fmt = dhcp_fmt_flags(dhcp_pkt->flags);
-	ssize_t bytes = snprintf(buffer, buf_size, "OP: %s\nHTYPE: %s\nHWLEN: %hhu\nHOPS: %hhu\nXID: %u\nSECS: %hu\nFLAGS: %s",
+	char* caddr_fmt = dhcp_fmt_addr(&(dhcp_pkt->ciaddr));
+	char* yaddr_fmt = dhcp_fmt_addr(&(dhcp_pkt->yiaddr));
+	char* hwaddr_fmt = dhcp_fmt_hwaddr(dhcp_pkt->chwaddr, dhcp_pkt->htype, dhcp_pkt->hwlen);
+
+	ssize_t bytes = snprintf(buffer, buf_size,
+			"OP: %s\nHTYPE: %s\nHWLEN: %hhu\nHOPS: %hhu\nXID: %u\nSECS: %hu\nFLAGS: %s\n"
+			"CLIENT ADDR: %s\nASSIGNED ADDR: %s\nHARDWARE ADDR: %s",
 			dhcp_fmt_op(dhcp_pkt->op), dhcp_fmt_htype(dhcp_pkt->htype), dhcp_pkt->hwlen, dhcp_pkt->hops, dhcp_pkt->xid,
-			dhcp_pkt->secs, flags_fmt);
+			dhcp_pkt->secs, flags_fmt, caddr_fmt, yaddr_fmt, hwaddr_fmt);
 
 	free(flags_fmt);
+	free(caddr_fmt);
+	free(yaddr_fmt);
+	free(hwaddr_fmt);
+
 	return bytes;
 }
 

@@ -1,7 +1,7 @@
 #include "endpoint.h"
 #include "context.h"
-#include "utils/log/log.h"
 #include "common.h"
+#include "utils/log/log.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -97,7 +97,4 @@ struct sockaddr* broadcast_addr() {
 	return NULL;
 }
 
-int translate_ifaddr(const char* ifaddr, struct in_addr* inaddr) {
-	return inet_aton(ifaddr, inaddr);
-}
 

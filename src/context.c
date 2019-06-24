@@ -30,6 +30,14 @@ static logger* loggr() {
 	return context_get_logger();
 }
 
+const char* context_db_path() {
+	return "/tmp/dhcpv2/storage.db";
+}
+
+const char* context_config_path() {
+	return "/tmp/dhcpv2/dhcp.conf";
+}
+
 
 int init_application_context(struct arguments* args) {
 	UNUSED(args);

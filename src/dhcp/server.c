@@ -1,10 +1,13 @@
 #include "server.h"
 #include "context.h"
+#include "control.h"
 #include "dhcp/inet/dhcppkt.h"
 #include "dhcp/inet/endpoint.h"
 #include "dhcp/data/store.h"
+#include "utils/net.h"
 #include "utils/log/log.h"
-#include "control.h"
+#include "config/dhcpconf.h"
+#include "config/loader.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -24,6 +27,7 @@ static struct logger* loggr() {
 
 
 typedef struct {
+	struct dhcp_config* dhcpconf;
 	struct db_connection* db_conn;
 	int dhcp_sock;
 	struct control_stream* ctl_stream;
@@ -35,7 +39,7 @@ int create_server_socket(const char* ifaddr, int port) {
 	struct sockaddr_in saddr;
 	memset(&saddr, 0, sizeof(struct sockaddr_in));
 
-	int err = translate_ifaddr(ifaddr, &(saddr.sin_addr));
+	int err = parse_inaddr(ifaddr, &(saddr.sin_addr));
 	if (err < 0) {
 		log_error(loggr(), "SERVER", "Error translating interface address");
 		return -1;
@@ -53,14 +57,24 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 	log_info(loggr(), TAG, "Initializing DHCP server...");
 	
 	memset(server_context, 0, sizeof(dhcp_server_context));
+
+	struct dhcp_config* dhcpconf = dhcp_config_load();
+	if (dhcpconf == NULL)
+		return -1;
+
 	struct db_connection* db_conn = init_db_connection();
+	if (db_conn == NULL) {
+		dhcp_config_cleanup(dhcpconf);
+		return -1;
+	}
 	
 	int dhcp_sock = create_server_socket(args->server_ifaddr, args->server_port);
 	if (dhcp_sock < 0) {
 		log_error(loggr(), "SERVER", "Failed to create socket from: ifaddr (%s) and port (%d): %s",
 				args->server_ifaddr, args->server_port, strerror(errno));
-		
+	
 		cleanup_db_connection(db_conn);
+		dhcp_config_cleanup(dhcpconf);
 		return -1;
 	}
 
@@ -70,9 +84,11 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 
 		close(dhcp_sock);
 		cleanup_db_connection(db_conn);
+		dhcp_config_cleanup(dhcpconf);
 		return -1;
 	}
 
+	server_context->dhcpconf = dhcpconf;
 	server_context->db_conn = db_conn;
 	server_context->dhcp_sock = dhcp_sock;
 	server_context->ctl_stream = ctl_stream;
@@ -82,6 +98,8 @@ int init_dhcp_server(struct server_args* args, dhcp_server_context* server_conte
 
 void dhcp_server_cleanup(dhcp_server_context* server_context) {
 	log_info(loggr(), "SERVER", "Disposing server resources...");
+
+	dhcp_config_cleanup(server_context->dhcpconf);
 
 	log_debug(loggr(), "SERVER", "Disposing database connection...");
 	cleanup_db_connection(server_context->db_conn);

@@ -10,6 +10,10 @@ void cleanup_application_context(void);
 struct logger* context_get_logger(void);
 
 
+const char* context_db_path(void);
+const char* context_config_path(void);
+
+
 struct control_stream {
 	int ctl_pipe;
 };

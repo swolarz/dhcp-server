@@ -72,6 +72,10 @@ DHCP_BIN := $(BINDIR)/$(TARGET)
 run-server: dhcp
 	@./$(DHCP_BIN)
 
+.PHONY: init-dirs
+init-dirs:
+	mkdir /tmp/dhcpv2
+
 
 ### Cleanup rules
 
