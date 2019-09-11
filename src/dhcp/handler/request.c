@@ -19,12 +19,8 @@ struct logger* loggr() {
 static void prepare_broadcast_addr(struct sockaddr_in* saddr, int resp_port) {
 	memset(saddr, 0, sizeof(struct sockaddr_in));
 
-	struct in_addr lobr_addr;
-	parse_inaddr("127.255.255.255", &lobr_addr);
-
 	saddr->sin_family = AF_INET;
-	// saddr->sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	memcpy(&(saddr->sin_addr), &lobr_addr, sizeof(struct in_addr));
+	saddr->sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	saddr->sin_port = htons(resp_port);
 }
 

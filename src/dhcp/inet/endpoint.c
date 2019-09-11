@@ -85,7 +85,7 @@ int recv_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt) {
 	size_t pkt_size = dhcp_packet_allocation();
 	char* buffer = malloc(pkt_size);
 
-	ssize_t bytes = recvfrom(sfd, buffer, pkt_size, 0, NULL, NULL);
+	ssize_t bytes = recv(sfd, buffer, pkt_size, 0);
 	if (bytes < 0) {
 		log_error(loggr(), TAG, "Error occurred while receiving DHCP packet: %s", strerror(errno));
 		free(buffer);

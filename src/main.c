@@ -12,7 +12,7 @@
 
 
 void on_shutdown() {
-	cleanup_application_context();
+	application_context_cleanup();
 }
 
 void on_exit_signal(int signo) {
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	int init_result = init_application_context(&args);
+	int init_result = application_context_init(&args);
 	if (init_result < 0) {
 		fprintf(stderr, "Failed to initialize context: %s\n", strerror(errno));
 		exit(2);

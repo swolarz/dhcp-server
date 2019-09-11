@@ -39,7 +39,7 @@ const char* context_config_path() {
 }
 
 
-int init_application_context(struct arguments* args) {
+int application_context_init(struct arguments* args) {
 	UNUSED(args);
 
 	app_context = malloc(sizeof(application_context));
@@ -51,7 +51,7 @@ int init_application_context(struct arguments* args) {
 	return 0;
 }
 
-void context_close_log() {
+static void context_close_log() {
 	if (app_context == NULL || app_context->log == NULL)
 		return;
 
@@ -59,7 +59,7 @@ void context_close_log() {
 	app_context->log = NULL;
 }
 
-void close_ctl_streams() {
+static void close_ctl_streams() {
 	if (app_context == NULL || app_context->ctl_streams == NULL)
 		return;
 
@@ -67,14 +67,14 @@ void close_ctl_streams() {
 	app_context->ctl_streams = NULL;
 }
 
-void cleanup_application_context() {
+void application_context_cleanup() {
 	log_info(app_context->log, TAG, "Cleaning application context...");
 
 	if (app_context == NULL)
 		return;
 
 	context_close_log();
-	list_delete(app_context->ctl_streams);
+	close_ctl_streams();
 
 	free(app_context);
 	app_context = NULL;
@@ -120,7 +120,7 @@ control_stream* register_management_listener() {
 	return ctl_stream;
 }
 
-int ctl_stream_matches(struct list_item* ctl_pipe_item, void* ctl_strm) {
+static int ctl_stream_matches(struct list_item* ctl_pipe_item, void* ctl_strm) {
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
 	control_stream* ctl_stream = (control_stream*) ctl_strm;
 
@@ -144,7 +144,7 @@ void unregister_management_listener(control_stream* ctl_stream) {
 	free(ctl_stream);
 }
 
-void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
+static void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
 	UNUSED(data);
 
 	control_pipe* ctl_pipe = (control_pipe*) ctl_pipe_item;
@@ -157,7 +157,7 @@ void control_notify_pipe(struct list_item* ctl_pipe_item, void* data) {
 	}
 }
 
-void control_notify_exit() {
+static void control_notify_exit() {
 	if (app_context == NULL || app_context->ctl_streams == NULL)
 		return;
 

@@ -4,8 +4,8 @@
 #include "args.h"
 
 
-int init_application_context(struct arguments* args);
-void cleanup_application_context(void);
+int application_context_init(struct arguments* args);
+void application_context_cleanup(void);
 
 struct logger* context_get_logger(void);
 

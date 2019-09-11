@@ -72,8 +72,8 @@ DHCP_BIN := $(BINDIR)/$(TARGET)
 run-server: dhcp
 	@./$(DHCP_BIN)
 
-.PHONY: init-dirs
-init-dirs:
+.PHONY: setup
+setup:
 	mkdir -p /tmp/dhcpv2
 	cp sample/dhcp.conf.default /tmp/dhcpv2/dhcp.conf
 
