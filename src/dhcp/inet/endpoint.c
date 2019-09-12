@@ -108,7 +108,7 @@ int recv_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt) {
 }
 
 int send_dhcp_packet(int sfd, struct dhcp_packet* dhcppkt, struct sockaddr* target_addr, socklen_t addrlen) {
-	log_info(loggr(), TAG, "Sending DHCP response");
+	log_info(loggr(), TAG, "Sending DHCP response packet");
 	log_dhcp_response(dhcppkt);
 
 	size_t pkt_size = dhcp_packet_size(dhcppkt);

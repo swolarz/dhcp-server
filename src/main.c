@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
 	struct server_args sargs = {
 		args.server_port,
-		args.server_host
+		args.server_if
 	};
 
 	dhcp_server_start(&sargs);

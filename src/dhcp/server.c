@@ -36,15 +36,19 @@ typedef struct {
 } dhcp_server_context;
 
 
-static int create_server_socket(const char* ifaddr, int port) {
+static int create_server_socket(const char* ifname, int port) {
 	struct sockaddr_in saddr;
 	memset(&saddr, 0, sizeof(struct sockaddr_in));
 
-	int err = parse_inaddr(ifaddr, &(saddr.sin_addr));
+	int err = get_interface_ip(ifname, &saddr.sin_addr);
 	if (err < 0) {
-		log_error(loggr(), "SERVER", "Error translating interface address");
+		log_error(loggr(), TAG, "Failed to get ip address for interface: %s", ifname);
 		return -1;
 	}
+
+	char bind_ip[64 + 1] = {0};
+	format_inaddr(&saddr.sin_addr, bind_ip, 64);
+	log_info(loggr(), TAG, "Binding socket at ip: %s", bind_ip);
 
 	saddr.sin_family = AF_INET;
 	saddr.sin_port = htons(port);
@@ -69,10 +73,10 @@ static int init_dhcp_server(struct server_args* args, dhcp_server_context* serve
 		return -1;
 	}
 	
-	int dhcp_sock = create_server_socket(args->server_ifaddr, args->server_port);
+	int dhcp_sock = create_server_socket(args->server_if, args->server_port);
 	if (dhcp_sock < 0) {
-		log_error(loggr(), "SERVER", "Failed to create socket from: ifaddr (%s) and port (%d): %s",
-				args->server_ifaddr, args->server_port, strerror(errno));
+		log_error(loggr(), "SERVER", "Failed to create socket at: interface (%s) and port (%d): %s",
+				args->server_if, args->server_port, strerror(errno));
 	
 		cleanup_db_connection(db_conn);
 		dhcp_config_cleanup(dhcpconf);
@@ -234,8 +238,8 @@ void dhcp_server_start(struct server_args* args) {
 		return;
 	}
 
-	log_info(loggr(), "SERVER", "Started DHCP server at %s on port %d...",
-			args->server_ifaddr, args->server_port);
+	log_info(loggr(), "SERVER", "Started DHCP server at interface %s on port %d...",
+			args->server_if, args->server_port);
 
 	err = dhcp_server_loop(&server_context, args->server_port);
 	if (err != 0) {

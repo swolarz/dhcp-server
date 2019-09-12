@@ -7,6 +7,7 @@
 int validate_inet_mask(struct in_addr* inmask);
 int inet_mask_len(struct in_addr* inmask);
 
+int get_interface_ip(const char* ifname, struct in_addr* ifaddr);
 
 int parse_inaddr(const char* inaddr_str, struct in_addr* inaddr);
 int format_inaddr(struct in_addr* inaddr, char* buffer, socklen_t size);

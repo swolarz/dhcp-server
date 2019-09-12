@@ -4,7 +4,7 @@
 
 struct server_args {
 	int server_port;
-	const char* server_ifaddr;
+	const char* server_if;
 };
 
 void dhcp_server_start(struct server_args* args);

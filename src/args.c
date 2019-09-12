@@ -9,8 +9,11 @@ const char* doc = "A custom implementation of DHCP server.\nContains DHCP client
 const char* args_doc = NULL;
 
 
+#define ARG_PORT_DEFAULT 6767
+#define ARG_INTERFACE_DEFAULT "any"
+
 #define OPT_PORT_KEY 'p'
-#define OPT_HOST_KEY 'h'
+#define OPT_INTERFACE_KEY 'i'
 
 
 int parse_port_arg(char* arg) {
@@ -27,17 +30,11 @@ int parse_port_arg(char* arg) {
 }
 
 int parse_host_arg(char* arg) {
-	if (strnlen(arg, SERVER_HOST_MAX_LEN + 1) > SERVER_HOST_MAX_LEN)
+	if (strnlen(arg, SERVER_IF_MAX_LEN + 1) > SERVER_IF_MAX_LEN)
 		return -1;
 
 	return 0;
 }
-
-/*
-void validate_all_args(struct argp_state* state, struct arguments* args) {
-	int host_specified = (strnlen(args->server_host, SERVER_HOST_MAX_LEN + 1) > 0);
-}
-*/
 
 static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 	struct arguments* args = (struct arguments*) state->input;
@@ -53,12 +50,12 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 			args->server_port = port;
 			break;
 
-		case OPT_HOST_KEY:
+		case OPT_INTERFACE_KEY:
 			result = parse_host_arg(arg);
 			if (result != 0)
 				argp_error(state, "Invalid host");
 			
-			strncpy(args->server_host, arg, SERVER_HOST_MAX_LEN);
+			strncpy(args->server_if, arg, SERVER_IF_MAX_LEN);
 			break;
 
 		case ARGP_KEY_ARG:
@@ -66,7 +63,6 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 			break;
 
 		case ARGP_KEY_END:
-			// validate_all_args(state, args);
 			break;
 
 		default:
@@ -79,11 +75,11 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 struct arguments get_parsed_arguments(int argc, char** argv) {
 	struct argp_option options[] = {
 		{ "port", OPT_PORT_KEY, "PORT", 0, "DHCP server port", 0 },
-		{ "host", OPT_HOST_KEY, "HOST", 0, "DHCP server bind ip address", 0 },
+		{ "interface", OPT_INTERFACE_KEY, "INTERFACE", 0, "DHCP server bind interface", 0 },
 		{ 0 }
 	};
 
-	struct arguments args = { 6767, "0.0.0.0", 0 };
+	struct arguments args = { ARG_PORT_DEFAULT, ARG_INTERFACE_DEFAULT, 0 };
 	struct argp argp = { options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 	
 	error_t argp_result = argp_parse(&argp, argc, argv, 0, 0, &args);
@@ -91,5 +87,4 @@ struct arguments get_parsed_arguments(int argc, char** argv) {
 	
 	return args;
 }
-
 

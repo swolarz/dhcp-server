@@ -1,7 +1,14 @@
 #include "net.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <arpa/inet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 
 int validate_inet_mask(struct in_addr* inmask) {
@@ -35,6 +42,35 @@ int inet_mask_len(struct in_addr* inmask) {
 	}
 
 	return 0;
+}
+
+static int get_interface_any_ip(struct in_addr* ifaddr) {
+	return parse_inaddr("0.0.0.0", ifaddr);
+}
+
+static int get_interface_existing_ip(const char* ifname, struct in_addr* ifaddr) {
+	int fd = socket(PF_INET, SOCK_DGRAM, 0);
+	struct ifreq ifr;
+
+	ifr.ifr_addr.sa_family = AF_INET;
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+
+	int err = ioctl(fd, SIOCGIFADDR, &ifr);
+	close(fd);
+
+	if (err < 0)
+		return -1;
+
+	memcpy(ifaddr, &((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr, sizeof(struct in_addr));
+
+	return 0;
+}
+
+int get_interface_ip(const char* ifname, struct in_addr* ifaddr) {
+	if (ifname == NULL || strncmp(ifname, "any", strlen("any")) == 0)
+		return get_interface_any_ip(ifaddr);
+
+	return get_interface_existing_ip(ifname, ifaddr);
 }
 
 

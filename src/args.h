@@ -3,13 +3,14 @@
 
 #include <argp.h>
 
+#include <net/if.h>
 
-#define SERVER_HOST_MAX_LEN 255
 
+#define SERVER_IF_MAX_LEN IFNAMSIZ
 
 struct arguments {
 	int server_port;
-	char server_host[SERVER_HOST_MAX_LEN + 1];
+	char server_if[SERVER_IF_MAX_LEN + 1];
 	error_t parse_result;
 };
 
