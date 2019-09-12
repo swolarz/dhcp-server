@@ -31,12 +31,15 @@ static void prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_pack
 	response->htype = HTYPE_ETHERNET;
 	response->hwlen = HWLEN_ETHERNET;
 	response->xid = request->xid;
-	response->secs = 100;
+	response->secs = 1;
+	response->flags = BOOTP_FLAG_BROADCAST;
 
 	memcpy(&(response->yiaddr), as_addr, sizeof(struct in_addr));
 	memcpy(&(response->giaddr), gate_addr, sizeof(struct in_addr));
+	memcpy(response->chwaddr, request->chwaddr, sizeof(request->chwaddr));
 
-	response->options[0] = 0xff;
+	char options[] = { 0x35, 0x01, 0x02, 0xff };
+	memcpy(response->options, options, sizeof(options));
 }
 
 
@@ -50,7 +53,7 @@ int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpco
 	if (err < 0)
 		return -1;
 
-	log_debug(loggr(), TAG, "Preparing DHCP response (xid = %u)", request.xid);
+	log_debug(loggr(), TAG, "Preparing DHCP response (xid = %#08x)", request.xid);
 
 	struct dhcp_packet response;
 	prepare_dhcp_response(&response, &request, &(dhcpconf->net_addr), &(dhcpconf->net_gateway));
@@ -61,7 +64,9 @@ int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpco
 	struct sockaddr_in braddr;
 	prepare_broadcast_addr(&braddr, resp_port);
 
-	log_debug(loggr(), TAG, "Sending DHCP response packet");
+	char brip[32 + 1] = {0};
+	format_inaddr(&braddr.sin_addr, brip, 32);
+	log_debug(loggr(), TAG, "Sending DHCP response to: %s", brip);
 	
 	err = send_dhcp_packet(client_fd, &response, (struct sockaddr*) &braddr, braddr_len);
 	if (err < 0)

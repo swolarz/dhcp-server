@@ -78,8 +78,8 @@ int parse_inaddr(const char* ifaddr_str, struct in_addr* inaddr) {
 	return inet_pton(AF_INET, ifaddr_str, inaddr);
 }
 
-int format_inaddr(struct in_addr* inaddr, char* buffer, socklen_t size) {
-	const char* result = inet_ntop(AF_INET, (const void*) inaddr, buffer, size);
+int format_inaddr(struct in_addr* inaddr, char* buffer, socklen_t bufsize) {
+	const char* result = inet_ntop(AF_INET, (const void*) inaddr, buffer, bufsize);
 
 	if (result == NULL)
 		return -1;

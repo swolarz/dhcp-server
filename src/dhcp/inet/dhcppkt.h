@@ -4,9 +4,11 @@
 #include <netinet/in.h>
 
 
-#define DHCP_SNAME_LEN 40
+#define DHCP_CHWADDR_LEN 16
+#define DHCP_SNAME_LEN 64
 #define DHCP_FILE_LEN 128
-#define DHCP_OPT_LEN 1
+#define DHCP_MAGIC_COOKIE_LEN 4
+#define DHCP_OPT_LEN 4
 
 
 struct dhcp_packet {
@@ -21,9 +23,10 @@ struct dhcp_packet {
 	struct in_addr yiaddr;
 	struct in_addr siaddr;
 	struct in_addr giaddr;
-	unsigned char chwaddr[16];
+	unsigned char chwaddr[DHCP_CHWADDR_LEN];
 	char sname[DHCP_SNAME_LEN];
 	char file[DHCP_FILE_LEN];
+	char magic[DHCP_MAGIC_COOKIE_LEN];
 	unsigned char options[DHCP_OPT_LEN];
 };
 
@@ -31,6 +34,7 @@ struct dhcp_packet {
 #define OP_BOOTPREPLY 2
 #define HTYPE_ETHERNET 1
 #define HWLEN_ETHERNET 6
+#define BOOTP_FLAG_BROADCAST 0x8000
 
 size_t dhcp_packet_allocation(void);
 size_t dhcp_packet_size(struct dhcp_packet* pkt);

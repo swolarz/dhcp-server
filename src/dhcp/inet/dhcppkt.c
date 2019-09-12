@@ -22,9 +22,10 @@ struct dhcp_packet_packed {
 	struct in_addr yiaddr;
 	struct in_addr siaddr;
 	struct in_addr giaddr;
-	unsigned char chwaddr[16];
+	unsigned char chwaddr[DHCP_CHWADDR_LEN];
 	char sname[DHCP_SNAME_LEN];
 	char file[DHCP_FILE_LEN];
+	char magic[DHCP_MAGIC_COOKIE_LEN];
 	unsigned char options[DHCP_OPT_LEN];
 } __attribute__ ((packed));
 
@@ -32,22 +33,22 @@ typedef struct dhcp_packet_packed dhcp_pkt_packed;
 
 
 size_t dhcp_packet_allocation(void) {
-	return sizeof(dhcp_pkt_packed) * 2;
+	return sizeof(dhcp_pkt_packed) + 1;
 }
 
 size_t dhcp_packet_size(struct dhcp_packet* pkt) {
 	UNUSED(pkt);
-	return dhcp_packet_allocation();
+	return sizeof(dhcp_pkt_packed);
 }
 
 
-static void dhcp_hton(dhcp_packet* pkt_host) {
+static void dhcp_packet_hton(dhcp_packet* pkt_host) {
 	pkt_host->xid = htonl(pkt_host->xid);
 	pkt_host->secs = htons(pkt_host->secs);
 	pkt_host->flags = htons(pkt_host->flags);
 }
 
-static void dhcp_ntoh(dhcp_packet* pkt_net) {
+static void dhcp_packet_ntoh(dhcp_packet* pkt_net) {
 	pkt_net->xid = ntohl(pkt_net->xid);
 	pkt_net->secs = ntohs(pkt_net->secs);
 	pkt_net->flags = ntohs(pkt_net->flags);
@@ -105,13 +106,19 @@ static void dhcp_packet_copy_rx(dhcp_packet* pkt_rx, dhcp_pkt_packed* pkt_rx_pac
 	memcpy(pkt_rx->options, pkt_rx_packed->options, sizeof(pkt_rx->options));
 }
 
+static void dhcp_packet_fill_cookie(dhcp_packet* pkt) {
+	static char magic_cookie[] = { 0x63, 0x82, 0x53, 0x63 };
+	memcpy(pkt->magic, magic_cookie, sizeof(magic_cookie));
+}
+
 
 int dhcp_packet_marshall(dhcp_packet* pkt, char* buffer, size_t* size) {
 	size_t real_size = dhcp_packet_size(pkt);
 	if (*size < real_size)
 		return -1;
 
-	dhcp_hton(pkt);
+	dhcp_packet_fill_cookie(pkt);
+	dhcp_packet_hton(pkt);
 
 	dhcp_pkt_packed* pkt_packed = (dhcp_pkt_packed*) buffer;
 	dhcp_packet_copy_tx(pkt_packed, pkt);
@@ -128,7 +135,7 @@ int dhcp_packet_unmarshall(char* buffer, size_t buf_size, dhcp_packet* pkt) {
 	dhcp_pkt_packed* pkt_packed = (dhcp_pkt_packed*) buffer;
 	dhcp_packet_copy_rx(pkt, pkt_packed);
 
-	dhcp_ntoh(pkt);
+	dhcp_packet_ntoh(pkt);
 
 	return 0;
 }
@@ -162,7 +169,7 @@ static char* dhcp_fmt_flags(u_int16_t flags) {
 	int i;
 	for (i = 0; i < 16; ++i) {
 		if ((flags & (1 << i)) > 0)
-			flags_buf[i] = '1';
+			flags_buf[15 - i] = '1';
 	}
 
 	return flags_buf;
@@ -200,7 +207,7 @@ ssize_t dhcp_packet_format(dhcp_packet* dhcp_pkt, char* buffer, size_t buf_size)
 	char* hwaddr_fmt = dhcp_fmt_hwaddr(dhcp_pkt->chwaddr, dhcp_pkt->htype, dhcp_pkt->hwlen);
 
 	ssize_t bytes = snprintf(buffer, buf_size,
-			"OP: %s\nHTYPE: %s\nHWLEN: %hhu\nHOPS: %hhu\nXID: %u\nSECS: %hu\nFLAGS: %s\n"
+			"OP: %s\nHTYPE: %s\nHWLEN: %hhu\nHOPS: %hhu\nXID: %#08x\nSECS: %hu\nFLAGS: %s\n"
 			"CLIENT ADDR: %s\nASSIGNED ADDR: %s\nGATEWAY ADDR: %s\nHARDWARE ADDR: %s",
 			dhcp_fmt_op(dhcp_pkt->op), dhcp_fmt_htype(dhcp_pkt->htype), dhcp_pkt->hwlen, dhcp_pkt->hops, dhcp_pkt->xid,
 			dhcp_pkt->secs, flags_fmt, caddr_fmt, yaddr_fmt, gaddr_fmt, hwaddr_fmt);
