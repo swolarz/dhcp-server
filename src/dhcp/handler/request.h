@@ -4,7 +4,13 @@
 #include "config/dhcpconf.h"
 
 
-int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf);
+#define RESP_DEST_IP_LEN 32
+
+struct handler_args {
+	char resp_dest_ip[RESP_DEST_IP_LEN + 1];
+};
+
+int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf, struct handler_args* hargs);
 
 
 #endif // __H_DHCP_HANDLER_REQUEST

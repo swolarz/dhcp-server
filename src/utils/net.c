@@ -75,7 +75,11 @@ int get_interface_ip(const char* ifname, struct in_addr* ifaddr) {
 
 
 int parse_inaddr(const char* ifaddr_str, struct in_addr* inaddr) {
-	return inet_pton(AF_INET, ifaddr_str, inaddr);
+	int err = inet_pton(AF_INET, ifaddr_str, inaddr);
+	if (err <= 0)
+		return -1;
+
+	return 0;
 }
 
 int format_inaddr(struct in_addr* inaddr, char* buffer, socklen_t bufsize) {

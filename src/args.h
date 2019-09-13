@@ -7,10 +7,12 @@
 
 
 #define SERVER_IF_MAX_LEN IFNAMSIZ
+#define RESP_DEST_IP_MAX_LEN 32
 
 struct arguments {
 	int server_port;
 	char server_if[SERVER_IF_MAX_LEN + 1];
+	char resp_dest_ip[RESP_DEST_IP_MAX_LEN + 1];
 	error_t parse_result;
 };
 

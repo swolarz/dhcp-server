@@ -11,9 +11,11 @@ const char* args_doc = NULL;
 
 #define ARG_PORT_DEFAULT 6767
 #define ARG_INTERFACE_DEFAULT "any"
+#define ARG_RESP_DEST_IP_DEFAULT "255.255.255.255"
 
 #define OPT_PORT_KEY 'p'
 #define OPT_INTERFACE_KEY 'i'
+#define OPT_RESP_DEST_IP_KEY 'd'
 
 
 int parse_port_arg(char* arg) {
@@ -31,6 +33,13 @@ int parse_port_arg(char* arg) {
 
 int parse_host_arg(char* arg) {
 	if (strnlen(arg, SERVER_IF_MAX_LEN + 1) > SERVER_IF_MAX_LEN)
+		return -1;
+
+	return 0;
+}
+
+int parse_dest_ip_arg(char* arg) {
+	if (strnlen(arg, RESP_DEST_IP_MAX_LEN + 1) > RESP_DEST_IP_MAX_LEN)
 		return -1;
 
 	return 0;
@@ -58,6 +67,14 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state) {
 			strncpy(args->server_if, arg, SERVER_IF_MAX_LEN);
 			break;
 
+		case OPT_RESP_DEST_IP_KEY:
+			result = parse_dest_ip_arg(arg);
+			if (result != 0)
+				argp_error(state, "Invalid destination ip address");
+
+			strncpy(args->resp_dest_ip, arg, RESP_DEST_IP_MAX_LEN);
+			break;
+
 		case ARGP_KEY_ARG:
 			argp_usage(state);
 			break;
@@ -76,10 +93,11 @@ struct arguments get_parsed_arguments(int argc, char** argv) {
 	struct argp_option options[] = {
 		{ "port", OPT_PORT_KEY, "PORT", 0, "DHCP server port", 0 },
 		{ "interface", OPT_INTERFACE_KEY, "INTERFACE", 0, "DHCP server bind interface", 0 },
+		{ "resp-addr", OPT_RESP_DEST_IP_KEY, "RESPONSE_ADDR", 0, "DHCP server response ip address", 0 },
 		{ 0 }
 	};
 
-	struct arguments args = { ARG_PORT_DEFAULT, ARG_INTERFACE_DEFAULT, 0 };
+	struct arguments args = { ARG_PORT_DEFAULT, ARG_INTERFACE_DEFAULT, ARG_RESP_DEST_IP_DEFAULT, 0 };
 	struct argp argp = { options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 	
 	error_t argp_result = argp_parse(&argp, argc, argv, 0, 0, &args);

@@ -16,15 +16,19 @@ struct logger* loggr() {
 }
 
 
-static void prepare_broadcast_addr(struct sockaddr_in* saddr, int resp_port) {
+static void prepare_broadcast_addr(struct sockaddr_in* saddr, const char* dest_ip, int resp_port) {
 	memset(saddr, 0, sizeof(struct sockaddr_in));
 
+	if (parse_inaddr(dest_ip, &(saddr->sin_addr)) != 0)
+		saddr->sin_addr.s_addr = htonl(INADDR_BROADCAST);
+
 	saddr->sin_family = AF_INET;
-	saddr->sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	saddr->sin_port = htons(resp_port);
 }
 
-static void prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request, struct in_addr* as_addr, struct in_addr* gate_addr) {
+static void prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request,
+								  struct in_addr* as_addr, struct in_addr* gate_addr) {
+
 	memset(response, 0, sizeof(struct dhcp_packet));
 
 	response->op = OP_BOOTPREPLY;
@@ -43,7 +47,7 @@ static void prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_pack
 }
 
 
-int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf) {
+int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf, struct handler_args* hargs) {
 	log_debug(loggr(), TAG, "Handling incoming DHCP request");
 
 	struct dhcp_packet request;
@@ -62,7 +66,7 @@ int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpco
 
 	socklen_t braddr_len = sizeof(struct sockaddr_in);
 	struct sockaddr_in braddr;
-	prepare_broadcast_addr(&braddr, resp_port);
+	prepare_broadcast_addr(&braddr, hargs->resp_dest_ip, resp_port);
 
 	char brip[32 + 1] = {0};
 	format_inaddr(&braddr.sin_addr, brip, 32);

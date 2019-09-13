@@ -29,6 +29,8 @@ static struct logger* loggr() {
 
 typedef struct {
 	struct dhcp_config* dhcpconf;
+	struct handler_args hargs;
+
 	struct db_connection* db_conn;
 	int dhcp_sock;
 	struct control_stream* ctl_stream;
@@ -67,6 +69,10 @@ static int init_dhcp_server(struct server_args* args, dhcp_server_context* serve
 	if (dhcpconf == NULL)
 		return -1;
 
+	struct handler_args hargs;
+	memset(&hargs, 0, sizeof(struct handler_args));
+	strncpy(hargs.resp_dest_ip, args->resp_dest_ip, RESP_DEST_IP_LEN);
+
 	struct db_connection* db_conn = init_db_connection();
 	if (db_conn == NULL) {
 		dhcp_config_cleanup(dhcpconf);
@@ -94,6 +100,7 @@ static int init_dhcp_server(struct server_args* args, dhcp_server_context* serve
 	}
 
 	server_context->dhcpconf = dhcpconf;
+	server_context->hargs = hargs;
 	server_context->db_conn = db_conn;
 	server_context->dhcp_sock = dhcp_sock;
 	server_context->ctl_stream = ctl_stream;
@@ -219,7 +226,7 @@ static int dhcp_server_loop(dhcp_server_context* server_context, int port) {
 			if (fd == ctl_fd)
 				continue;
 			else if (fd == dhcp_fd)
-				handle_dhcp_request(fd, port + 1, server_context->dhcpconf);
+				handle_dhcp_request(fd, port + 1, server_context->dhcpconf, &(server_context->hargs));
 		}
 	}
 
