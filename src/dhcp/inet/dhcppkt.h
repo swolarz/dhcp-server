@@ -51,3 +51,4 @@ ssize_t dhcp_packet_format(struct dhcp_packet* dhcp_pkt, char* buffer, size_t bu
 
 
 #endif // __H_DHCP_INET_DHCPPKT
+
