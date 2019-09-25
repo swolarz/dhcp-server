@@ -8,6 +8,7 @@ To run the server for the first time the config and sqlite data directories must
 
 The default path of the configuration file is: `/tmp/dhcpv2/dhcp.conf`.  
 The default configuration values are inside: `<project directory>/sample/dhcp.conf.default`.  
+Save default configuration values as: `<project directory>/sample/dhcp.conf` and adjust the config values for your needs.  
   
 Configuration values:
 - `LEASE_NET_IP` ip address of the network to which the client want to join

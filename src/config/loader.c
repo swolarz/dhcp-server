@@ -23,17 +23,17 @@ static struct logger* loggr() {
 
 #define CONF_NET_IP 1
 #define CONF_NET_MASK 2
-#define CONF_NET_GATEWAY 3
-#define CONF_NET_DHCP_IP 4
+#define CONF_DHCP_SERVER_ID 3
+#define CONF_NET_GATEWAY 4
 #define CONF_NET_DNS_IP 5
 #define CONF_LEASE_TIME 6
 
 
 static const char* NET_IP_KEY = "LEASE_NET_IP";
 static const char* NET_MASK_KEY = "LEASE_NET_MASK";
+static const char* DHCP_SERVER_ID_KEY = "DHCP_SERVER_ID";
 static const char* NET_ROUTER_KEY = "NET_ROUTER_IP";
 static const char* LEASE_TIME_KEY = "LEASE_TIME_SECS";
-static const char* NET_DHCP_SERVER_KEY = "NET_DHCP_SERVER_IP";
 static const char* NET_DNS_SERVER_KEY = "NET_DNS_SERVER_IP";
 
 
@@ -143,6 +143,16 @@ static int parse_config_line(const char* buffer, dhcp_config* conf) {
 		else
 			parsed_field = CONF_NET_MASK;
 	}
+	else if (strcmp(key, DHCP_SERVER_ID_KEY) == 0) {
+		log_debug(loggr(), TAG, "DHCP server identifier: %s", value);
+
+		int err = parse_inaddr(value, &(conf->dhcp_server_id));
+
+		if (err)
+			log_warn(loggr(), TAG, "Error parsing DHCP server IP address");
+		else
+			parsed_field = CONF_DHCP_SERVER_ID;
+	}
 	else if (strcmp(key, NET_ROUTER_KEY) == 0) {
 		log_debug(loggr(), TAG, "Network gateway ip: %s", value);
 		
@@ -163,16 +173,6 @@ static int parse_config_line(const char* buffer, dhcp_config* conf) {
 			parsed_field = CONF_LEASE_TIME;
 		else
 			log_warn(loggr(), TAG, "Error parsing lease time in configuration file");
-	}
-	else if (strcmp(key, NET_DHCP_SERVER_KEY) == 0) {
-		log_debug(loggr(), TAG, "DHCP server IP address: %s", value);
-
-		int err = parse_inaddr(value, &(conf->net_dhcp_addr));
-
-		if (err)
-			log_warn(loggr(), TAG, "Error parsing DHCP server IP address");
-		else
-			parsed_field = CONF_NET_DHCP_IP;
 	}
 	else if (strcmp(key, NET_DNS_SERVER_KEY) == 0) {
 		log_debug(loggr(), TAG, "DNS server IP address: %s", value);
@@ -201,6 +201,7 @@ static int parse_dhcp_config(FILE* cfp, dhcp_config* conf) {
 
 	int net_ip_set = 0;
 	int net_mask_set = 0;
+	int dhcp_server_id_set = 0;
 	int net_gateway_set = 0;
 
 	while (fgets(buffer, size, cfp) != NULL) {
@@ -234,6 +235,9 @@ static int parse_dhcp_config(FILE* cfp, dhcp_config* conf) {
 			case CONF_NET_MASK:
 				net_mask_set = 1;
 				break;
+			case CONF_DHCP_SERVER_ID:
+				dhcp_server_id_set = 1;
+				break;
 			case CONF_NET_GATEWAY:
 				net_gateway_set = 1;
 				break;
@@ -250,28 +254,17 @@ static int parse_dhcp_config(FILE* cfp, dhcp_config* conf) {
 		return -1;
 	}
 
+	if (dhcp_server_id_set == 0) {
+		log_error(loggr(), TAG, "DHCP server identifier (IP) not set");
+		return -1;
+	}
+
 	if (net_gateway_set == 0) {
 		log_error(loggr(), TAG, "Network gateway not set");
 		return -1;
 	}
 
 	return 0;
-}
-
-static dhcp_config* create_dhcp_config() {
-	dhcp_config* conf = malloc(sizeof(dhcp_config));
-	if (conf == NULL)
-		return NULL;
-
-	memset(conf, 0, sizeof(dhcp_config));
-
-	conf->lease_time_secs = 3600;	// 1h
-	conf->default_ip_ttl = 64;
-
-	conf->net_dhcp_addr = dhcp_conf_null_addr();
-	conf->net_dns_addr = dhcp_conf_null_addr();
-
-	return conf;
 }
 
 dhcp_config* dhcp_config_load() {
@@ -294,9 +287,5 @@ dhcp_config* dhcp_config_load() {
 	}
 
 	return conf;
-}
-
-void dhcp_config_cleanup(dhcp_config* conf) {
-	free(conf);
 }
 

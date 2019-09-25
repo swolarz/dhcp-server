@@ -4,11 +4,12 @@
 #include <netinet/in.h>
 
 
+#define DHCP_PKT_REQ_MAX_SIZE 1024
+
 #define DHCP_CHWADDR_LEN 16
 #define DHCP_SNAME_LEN 64
 #define DHCP_FILE_LEN 128
 #define DHCP_MAGIC_COOKIE_LEN 4
-#define DHCP_OPT_LEN 4
 
 
 struct dhcp_packet {
@@ -27,20 +28,28 @@ struct dhcp_packet {
 	char sname[DHCP_SNAME_LEN];
 	char file[DHCP_FILE_LEN];
 	char magic[DHCP_MAGIC_COOKIE_LEN];
-	unsigned char options[DHCP_OPT_LEN];
-};
+	void* options;
+} __attribute__ ((packed));
+
 
 #define OP_BOOTPREQUEST 1
 #define OP_BOOTPREPLY 2
 #define HTYPE_ETHERNET 1
 #define HWLEN_ETHERNET 6
+#define BOOTP_FLAG_UNICAST 0x0000
 #define BOOTP_FLAG_BROADCAST 0x8000
 
-size_t dhcp_packet_allocation(void);
-size_t dhcp_packet_size(struct dhcp_packet* pkt);
 
-int dhcp_packet_marshall(struct dhcp_packet* pkt, char* buffer, size_t* size);
-int dhcp_packet_unmarshall(char* buffer, size_t buf_size, struct dhcp_packet* pkt);
+size_t dhcp_resp_packet_size(struct dhcp_packet* pkt);
+
+struct dhcp_packet* dhcp_packet_resp_create(void);
+struct dhcp_packet* dhcp_packet_req_create(void);
+
+void dhcp_packet_resp_delete(struct dhcp_packet* dhcp_resp);
+void dhcp_packet_req_delete(struct dhcp_packet* dhcp_req);
+
+ssize_t dhcp_packet_resp_marshall(struct dhcp_packet* pkt, char* buffer, size_t* size);
+ssize_t dhcp_packet_req_unmarshall(char* buffer, size_t buf_size, struct dhcp_packet* pkt);
 
 
 #define DHCP_INVALID_OP 1

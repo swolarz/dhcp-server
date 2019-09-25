@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 
+
 static struct logger* loggr() {
 	return context_get_logger();
 }

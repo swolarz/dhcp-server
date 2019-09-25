@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -O2
 
 
 SRCDIR = src
@@ -39,7 +39,7 @@ sqlite3: $(STATICDIR)/$(LIBSQLITE3)
 
 $(BINDIR)/$(TARGET): $(OBJS)
 	@mkdir -p $(BINDIR)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
 
 $(OBJS): $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPDIR)/%.d
 	@mkdir -p $(dir $@)
@@ -60,7 +60,7 @@ SQLITE3_SOURCE = lib/sqlite3/sqlite3.c
 
 $(STATICDIR)/$(LIBSQLITE3): $(SQLITE3_SOURCE) $(INCLUDEDIR)/sqlite3.h
 	@mkdir -p $(STATICDIR)
-	$(CC) -c $(SQLITE3_SOURCE) -o $(STATICDIR)/sqlite3.o -lpthread -ldl
+	$(CC) -c -O2 $(SQLITE3_SOURCE) -o $(STATICDIR)/sqlite3.o -lpthread -ldl
 	ar rcs $@ $(STATICDIR)/sqlite3.o
 
 
@@ -74,8 +74,9 @@ run-server: dhcp
 
 .PHONY: setup
 setup:
+	rm -r /tmp/dhcpv2
 	mkdir -p /tmp/dhcpv2
-	cp sample/dhcp.conf.default /tmp/dhcpv2/dhcp.conf
+	if [ -e sample/dhcp.conf ]; then cp sample/dhcp.conf /tmp/dhcpv2/dhcp.conf ; else echo "No dhcp.conf file in sample dir" ; fi
 
 
 ### Cleanup rules

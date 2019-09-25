@@ -2,7 +2,9 @@
 #include "context.h"
 #include "config/dhcpconf.h"
 #include "dhcp/inet/dhcppkt.h"
+#include "dhcp/inet/dhcpopt.h"
 #include "dhcp/inet/endpoint.h"
+#include "dhcp/handler/rules.h"
 #include "utils/net.h"
 #include "utils/log/log.h"
 
@@ -11,7 +13,7 @@
 
 static const char* TAG = "REQUEST";
 
-struct logger* loggr() {
+static struct logger* loggr() {
 	return context_get_logger();
 }
 
@@ -26,42 +28,12 @@ static void prepare_broadcast_addr(struct sockaddr_in* saddr, const char* dest_i
 	saddr->sin_port = htons(resp_port);
 }
 
-static void prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request,
-								  struct in_addr* as_addr, struct in_addr* gate_addr) {
-
-	memset(response, 0, sizeof(struct dhcp_packet));
-
-	response->op = OP_BOOTPREPLY;
-	response->htype = HTYPE_ETHERNET;
-	response->hwlen = HWLEN_ETHERNET;
-	response->xid = request->xid;
-	response->secs = 1;
-	response->flags = BOOTP_FLAG_BROADCAST;
-
-	memcpy(&(response->yiaddr), as_addr, sizeof(struct in_addr));
-	memcpy(&(response->giaddr), gate_addr, sizeof(struct in_addr));
-	memcpy(response->chwaddr, request->chwaddr, sizeof(request->chwaddr));
-
-	char options[] = { 0x35, 0x01, 0x02, 0xff };
-	memcpy(response->options, options, sizeof(options));
+static int prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request, struct dhcp_config* dhcpconf) {
+	return dhcp_req_resp_process_pipeline(request, response, dhcpconf);
 }
 
 
-int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf, struct handler_args* hargs) {
-	log_debug(loggr(), TAG, "Handling incoming DHCP request");
-
-	struct dhcp_packet request;
-	memset(&request, 0, sizeof(struct dhcp_packet));
-
-	int err = recv_dhcp_packet(client_fd, &request);
-	if (err < 0)
-		return -1;
-
-	log_debug(loggr(), TAG, "Preparing DHCP response (xid = %#08x)", request.xid);
-
-	struct dhcp_packet response;
-	prepare_dhcp_response(&response, &request, &(dhcpconf->net_addr), &(dhcpconf->net_gateway));
-
+static int send_dhcp_response(int client_fd, int resp_port, struct dhcp_packet* response, struct handler_args* hargs) {
 	log_debug(loggr(), TAG, "Preparing DHCP response broadcast address");
 
 	socklen_t braddr_len = sizeof(struct sockaddr_in);
@@ -72,7 +44,42 @@ int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpco
 	format_inaddr(&braddr.sin_addr, brip, 32);
 	log_debug(loggr(), TAG, "Sending DHCP response to: %s", brip);
 	
-	err = send_dhcp_packet(client_fd, &response, (struct sockaddr*) &braddr, braddr_len);
+	return send_dhcp_resp_packet(client_fd, response, (struct sockaddr*) &braddr, braddr_len);
+}
+
+
+int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf, struct handler_args* hargs) {
+	log_debug(loggr(), TAG, "Handling incoming DHCP request");
+
+	struct dhcp_packet* request = dhcp_packet_req_create();
+	if (request == NULL)
+		return -1;
+
+	int err = recv_dhcp_req_packet(client_fd, request);
+	if (err < 0) {
+		dhcp_packet_req_delete(request);
+		return -1;
+	}
+
+	log_debug(loggr(), TAG, "Preparing DHCP response (xid = %#08x)", request->xid);
+
+	struct dhcp_packet* response = dhcp_packet_resp_create();
+	if (response == NULL) {
+		dhcp_packet_req_delete(request);
+		return -1;
+	}
+
+	err = prepare_dhcp_response(response, request, dhcpconf);
+	dhcp_packet_req_delete(request);
+
+	if (err) {
+		dhcp_packet_resp_delete(response);
+		return -1;
+	}
+
+	err = send_dhcp_response(client_fd, resp_port, response, hargs);
+	dhcp_packet_resp_delete(response);
+
 	if (err < 0)
 		return -1;
 
