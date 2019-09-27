@@ -74,7 +74,7 @@ run-server: dhcp
 
 .PHONY: setup
 setup:
-	rm -r /tmp/dhcpv2
+	if [ -d /tmp/dhcpv2 ]; then rm -r /tmp/dhcpv2 ; fi
 	mkdir -p /tmp/dhcpv2
 	if [ -e sample/dhcp.conf ]; then cp sample/dhcp.conf /tmp/dhcpv2/dhcp.conf ; else echo "No dhcp.conf file in sample dir" ; fi
 

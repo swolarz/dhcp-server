@@ -28,8 +28,18 @@ static void prepare_broadcast_addr(struct sockaddr_in* saddr, const char* dest_i
 	saddr->sin_port = htons(resp_port);
 }
 
-static int prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request, struct dhcp_config* dhcpconf) {
-	return dhcp_req_resp_process_pipeline(request, response, dhcpconf);
+static int prepare_dhcp_response(struct dhcp_packet* response, struct dhcp_packet* request, struct dhcp_config* dhcpconf, struct db_connection* db_conn) {
+	int err = dhcp_req_resp_process_pipeline(request, response, dhcpconf, db_conn);
+
+	if (err == DHCP_PROCESS_FAILED) {
+		log_error(loggr(), TAG, "Failed to prepare DHCP response based on the request");
+		return -1;
+	}
+
+	if (err == DHCP_PROCESS_IGNORE)
+		log_info(loggr(), TAG, "Ignoring DHCP request");
+	
+	return 0;
 }
 
 
@@ -48,7 +58,7 @@ static int send_dhcp_response(int client_fd, int resp_port, struct dhcp_packet* 
 }
 
 
-int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpconf, struct handler_args* hargs) {
+int handle_dhcp_request(int client_fd, int resp_port, struct db_connection* db_conn, struct dhcp_config* dhcpconf, struct handler_args* hargs) {
 	log_debug(loggr(), TAG, "Handling incoming DHCP request");
 
 	struct dhcp_packet* request = dhcp_packet_req_create();
@@ -69,7 +79,7 @@ int handle_dhcp_request(int client_fd, int resp_port, struct dhcp_config* dhcpco
 		return -1;
 	}
 
-	err = prepare_dhcp_response(response, request, dhcpconf);
+	err = prepare_dhcp_response(response, request, dhcpconf, db_conn);
 	dhcp_packet_req_delete(request);
 
 	if (err) {

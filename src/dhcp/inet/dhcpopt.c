@@ -19,6 +19,7 @@ dhcp_resp_options* dhcp_resp_options_create() {
 dhcp_req_options* dhcp_req_options_create() {
 	dhcp_req_options* req_opts = malloc(sizeof(dhcp_req_options));
 	memset(req_opts, 0, sizeof(dhcp_req_options));
+	memset(req_opts->req_params, FALSEVAL, sizeof(req_opts->req_params));
 
 	return req_opts;
 }
@@ -101,7 +102,7 @@ static void dhcp_read_req_params_option_content(char* buffer, size_t opt_len, dh
 	size_t i;
 	for (i = 0; i < opt_len; i += sizeof(u_int8_t)) {
 		u_int8_t* param = (u_int8_t*) (buffer + i);
-		req_opts->req_params[*param] = 1;
+		req_opts->req_params[*param] = TRUEVAL;
 	}
 }
 
@@ -161,11 +162,47 @@ ssize_t dhcp_opt_parse_req(char* opt_buffer, size_t size, dhcp_req_options* req_
 }
 
 
+#define DHCP_DISCOVER_MSG 1
+#define DHCP_OFFER_MSG 2
+#define DHCP_REQUEST_MSG 3
+#define DHCP_DECLINE_MSG 4
+#define DHCP_ACK_MSG 5
+#define DHCP_NAK_MSG 6
+#define DHCP_RELEASE_MSG 7
+#define DHCP_INFORM_MSG 8
+
+
+
 int dhcp_option_format_type(u_int8_t dhcp_msg_type, char* buff, size_t buffsize) {
-	UNUSED(dhcp_msg_type);
-	UNUSED(buff);
-	UNUSED(buffsize);
-	//TODO
-	return -1;
+	switch (dhcp_msg_type) {
+		case DHCP_DISCOVER_MSG:
+			strncpy(buff, "DISCOVER", buffsize);
+			break;
+		case DHCP_OFFER_MSG:
+			strncpy(buff, "OFFER", buffsize);
+			break;
+		case DHCP_REQUEST_MSG:
+			strncpy(buff, "REQUEST", buffsize);
+			break;
+		case DHCP_DECLINE_MSG:
+			strncpy(buff, "DECLINE", buffsize);
+			break;
+		case DHCP_ACK_MSG:
+			strncpy(buff, "ACK", buffsize);
+			break;
+		case DHCP_NAK_MSG:
+			strncpy(buff, "NAK", buffsize);
+			break;
+		case DHCP_RELEASE_MSG:
+			strncpy(buff, "RELEASE", buffsize);
+			break;
+		case DHCP_INFORM_MSG:
+			strncpy(buff, "INFORM", buffsize);
+			break;
+		default:
+			return -1;
+	}
+
+	return 0;
 }
 

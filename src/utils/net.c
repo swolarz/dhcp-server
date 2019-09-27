@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "common.h"
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -43,6 +44,14 @@ int inet_mask_len(struct in_addr* inmask) {
 
 	return 0;
 }
+
+int is_same_network(struct in_addr x_addr, struct in_addr y_addr, struct in_addr mask) {
+	struct in_addr x_net = { x_addr.s_addr & mask.s_addr };
+	struct in_addr y_net = { y_addr.s_addr & mask.s_addr };
+
+	return (x_net.s_addr == y_net.s_addr) ? TRUEVAL : FALSEVAL;
+}
+
 
 static int get_interface_any_ip(struct in_addr* ifaddr) {
 	return parse_inaddr("0.0.0.0", ifaddr);

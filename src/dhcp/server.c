@@ -226,7 +226,7 @@ static int dhcp_server_loop(dhcp_server_context* server_context, int port) {
 			if (fd == ctl_fd)
 				continue;
 			else if (fd == dhcp_fd)
-				handle_dhcp_request(fd, port + 1, server_context->dhcpconf, &(server_context->hargs));
+				handle_dhcp_request(fd, port + 1, server_context->db_conn, server_context->dhcpconf, &(server_context->hargs));
 		}
 	}
 
